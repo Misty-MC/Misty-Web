@@ -25,7 +25,7 @@ body{
 .orb.a{width:620px;height:620px;left:-180px;top:-160px;background:radial-gradient(circle,#e4f1ff99,#e4f1ff00 65%)}
 .orb.b{width:700px;height:700px;right:-220px;bottom:-240px;background:radial-gradient(circle,#3f4a5eaa,#3f4a5e00 62%)}
 main,header,footer{position:relative;z-index:1}
-.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+.wrap{max-width:1360px;margin:0 auto;padding:0 clamp(20px,4vw,56px)}
 .pix{font-family:Silkscreen,monospace;letter-spacing:.02em}
 .glass{
   background:var(--glass);border:1px solid var(--edge);border-radius:22px;
@@ -57,13 +57,14 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0
 .btn svg{width:22px;height:22px;flex:none}
 section{padding:40px 0}
 h2{font-size:clamp(22px,4vw,32px);color:var(--navy);margin-bottom:22px;text-align:center}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+@media(min-width:1100px){.grid{grid-template-columns:repeat(4,1fr)}}
 .card{padding:24px;transition:transform .2s}
 .card:hover{transform:translateY(-4px)}
 .card .ico{font-size:28px;margin-bottom:8px}
 .card h3{font-family:Silkscreen,monospace;font-size:15px;color:var(--navy);margin-bottom:6px}
 .card p{font-size:14.5px;color:var(--muted)}
-.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px;max-width:960px;margin:0 auto}
 .dl .card{display:flex;flex-direction:column;gap:12px}
 .dl .card p{flex:1}
 .dl .meta{font-size:13px;color:var(--muted)}
@@ -72,6 +73,16 @@ h2{font-size:clamp(22px,4vw,32px);color:var(--navy);margin-bottom:22px;text-alig
 .log pre{white-space:pre-wrap;font:14.5px/1.6 system-ui,sans-serif;color:var(--ink)}
 footer{text-align:center;padding:40px 0 50px;font-size:13px;color:#1c2335cc}
 footer a{color:inherit}
+@media(min-width:1500px){
+  .hero{padding:90px 0 60px}
+  .hero img.logo{width:150px;height:150px;border-radius:34px}
+  .hero p.sub{max-width:760px;font-size:22px}
+  .btn{font-size:18px;padding:18px 34px}
+  .card{padding:30px}
+  .card h3{font-size:17px}
+  .card p{font-size:16px}
+  section{padding:56px 0}
+}
 @media(max-width:620px){.navlinks a:not(.keep){display:none}}
 </style>
 </head>
