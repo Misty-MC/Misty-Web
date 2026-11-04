@@ -144,6 +144,7 @@ footer .brand{justify-content:center;margin-bottom:12px;font-size:22px}
       </div>
       <div class="lang glass" role="group" aria-label="Language">
         <button type="button" data-lang="fr" aria-pressed="false">FR</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
         <button type="button" data-lang="es" aria-pressed="false">ES</button>
         <button type="button" data-lang="ru" aria-pressed="false">RU</button>
         <button type="button" data-lang="it" aria-pressed="false">IT</button>
@@ -170,7 +171,7 @@ footer .brand{justify-content:center;margin-bottom:12px;font-size:22px}
         <span><span data-i18n="btn_portable"></span><small id="size-portable">.zip</small></span>
       </a>
     </div>
-    <img class="shot" src="/assets/screens/home.png" data-i18n-alt="alt_home" alt="" width="1180" height="720">
+    <img class="shot" data-shot="home" data-i18n-alt="alt_home" alt="" width="1180" height="720">
   </div>
 
   <section id="features">
@@ -183,7 +184,7 @@ footer .brand{justify-content:center;margin-bottom:12px;font-size:22px}
         <p data-i18n="f1_p"></p>
         <ul><li>Forge</li><li>NeoForge</li><li>Fabric</li><li>Quilt</li><li>OptiFine</li><li>LiteLoader</li></ul>
       </div>
-      <img class="shot" src="/assets/screens/profiles.png" data-i18n-alt="alt_profiles" alt="" width="1180" height="720" loading="lazy">
+      <img class="shot" data-shot="profiles" data-i18n-alt="alt_profiles" alt="" width="1180" height="720" loading="lazy">
     </div>
 
     <div class="feature rev">
@@ -191,7 +192,7 @@ footer .brand{justify-content:center;margin-bottom:12px;font-size:22px}
         <h3 data-i18n="f2_t"></h3>
         <p data-i18n="f2_p"></p>
       </div>
-      <img class="shot" src="/assets/screens/home.png" data-i18n-alt="alt_version" alt="" width="1180" height="720" loading="lazy">
+      <img class="shot" data-shot="home" data-i18n-alt="alt_version" alt="" width="1180" height="720" loading="lazy">
     </div>
 
     <div class="feature">
@@ -200,7 +201,7 @@ footer .brand{justify-content:center;margin-bottom:12px;font-size:22px}
         <p data-i18n="f3_p"></p>
         <ul><li data-i18n="experimental"></li></ul>
       </div>
-      <img class="shot" src="/assets/screens/textures.png" data-i18n-alt="alt_textures" alt="" width="1180" height="720" loading="lazy">
+      <img class="shot" data-shot="textures" data-i18n-alt="alt_textures" alt="" width="1180" height="720" loading="lazy">
     </div>
 
     <div class="grid" style="margin-top:32px">
@@ -270,6 +271,29 @@ const T = {
     news_title:"Nouveautés", version:"Version", loading:"Chargement…", unavailable:"Notes indisponibles", latest_fallback:"dernière",
     notes_default:"Voir les améliorations de cette version dans le launcher.",
     footer:"Misty n'est pas affilié à Mojang Studios ni à Microsoft. Minecraft est une marque de Mojang AB.", mb:"Mo"
+  },
+  en: {
+    title:"Misty – Minecraft Launcher", locale:"en-US",
+    nav_features:"Features", nav_news:"What's new", nav_download:"Download",
+    hero_sub:"The light, fast and elegant Minecraft launcher. Every version, every mod loader: pick, click, play.",
+    latest:"Latest version:", btn_installer:"Download the installer", btn_portable:"Portable version",
+    alt_home:"Misty home screen", alt_profiles:"Misty profile list", alt_version:"Version and mod loader selection", alt_textures:"Texture pack editor",
+    features_title:"Features", features_lead:"Everything you need to manage your Minecraft games, in one small app.",
+    f1_t:"Profile management", f1_p:"Each profile has its own version, mod loader and folder. Create as many as you like: libraries are shared, so nothing is downloaded twice.",
+    f2_t:"Mods & modpacks", f2_p:"Install mods, resource packs, datapacks and shaders from Modrinth and CurseForge, with their dependencies. Import a modpack in one click: the profile is ready to play.",
+    f3_t:"Texture editor", f3_p:"Create your texture packs right in the launcher, pixel by pixel, then export them as .zip. A texture edited in Paint.NET is reloaded automatically.",
+    experimental:"Experimental",
+    c1_t:"Every version", c1_p:"Releases, snapshots, betas and alphas.",
+    c2_t:"Accounts", c2_p:"Sign in with Microsoft or use offline accounts, your choice.",
+    c3_t:"Ultra light", c3_p:"Written in Rust, uses very little RAM.",
+    c4_t:"Multilingual", c4_p:"Translated interface, automatic updates and Discord Rich Presence.",
+    dl_title:"I want it!", dl_lead:"Free, for Windows 10 and 11.",
+    inst_t:"Installer", inst_p:"Recommended. Installs in your user profile without admin rights, with a Start menu shortcut and a clean uninstall.",
+    port_t:"Portable", port_p:"No installation: extract the archive and run <b>Misty.exe</b>. Perfect for a USB drive.",
+    dl_setup:"Download the Setup", dl_portable:"Download the portable",
+    news_title:"What's new", version:"Version", loading:"Loading…", unavailable:"Notes unavailable", latest_fallback:"latest",
+    notes_default:"See the improvements in this version inside the launcher.",
+    footer:"Misty is not affiliated with Mojang Studios or Microsoft. Minecraft is a trademark of Mojang AB.", mb:"MB"
   },
   es: {
     title:"Misty – Launcher de Minecraft", locale:"es-ES",
@@ -347,8 +371,8 @@ let lang = "fr", rel = null, failed = false;
 
 function detect() {
   try { const s = localStorage.getItem("misty-lang"); if (LANGS.includes(s)) return s; } catch (e) {}
-  const n = (navigator.language || "fr").slice(0, 2).toLowerCase();
-  return LANGS.includes(n) ? n : "fr";
+  const n = (navigator.language || "en").slice(0, 2).toLowerCase();
+  return LANGS.includes(n) ? n : "en";
 }
 
 const fmtSize = b => b ? (b / 1048576).toFixed(1).replace(".", T[lang].locale === "en-US" ? "." : ",") + " " + T[lang].mb : "";
@@ -378,6 +402,11 @@ function setLang(l) {
   document.documentElement.lang = l;
   document.title = t.title;
   document.querySelectorAll("[data-i18n]").forEach(el => { el.innerHTML = t[el.dataset.i18n]; });
+  const dir = l === "fr" ? "fr" : "en"; // l'application n'existe qu'en FR/EN : ES/RU/IT utilisent les captures anglaises
+  document.querySelectorAll("[data-shot]").forEach(el => {
+    const src = `/assets/screens/${dir}/${el.dataset.shot}.png`;
+    if (el.getAttribute("src") !== src) el.src = src;
+  });
   document.querySelectorAll("[data-i18n-alt]").forEach(el => { el.alt = t[el.dataset.i18nAlt]; });
   document.querySelectorAll(".lang button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === l)));
   try { localStorage.setItem("misty-lang", l); } catch (e) {}
