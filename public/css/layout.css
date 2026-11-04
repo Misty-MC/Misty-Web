@@ -7,18 +7,21 @@ nav{
 }
 header.scrolled nav{background:rgba(255,255,255,.72);box-shadow:0 10px 40px rgba(28,35,53,.16)}
 .brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:700;color:var(--navy);text-decoration:none}
-.brand img{width:34px;height:34px;image-rendering:pixelated}
+.brand img{height:34px;width:auto;flex:none}
 .navlinks{display:flex;gap:2px}
 .navlinks a{color:var(--navy);text-decoration:none;font-weight:600;font-size:14px;padding:9px 14px;border-radius:10px;transition:background .2s}
 .navlinks a:hover{background:#ffffffb3}
 .navright{display:flex;align-items:center;gap:8px}
 
 .langdd{position:relative}
+/* Bouton de langue en relief (même famille que les boutons 3D) */
 .langdd>button{
-  display:flex;align-items:center;gap:6px;font-family:Silkscreen,monospace;font-size:12px;color:var(--navy);
-  background:#ffffff99;border:1px solid var(--edge);border-radius:12px;padding:9px 12px;cursor:pointer;
+  display:flex;align-items:center;gap:7px;font-family:Silkscreen,monospace;font-size:12px;color:var(--navy);
+  background:linear-gradient(180deg,#fff,#eef4fc);border:1px solid #d3e1f2;border-radius:12px;padding:9px 13px;cursor:pointer;
+  box-shadow:0 4px 0 #b9cce6,0 10px 20px -8px #1c233540;transition:transform .12s,box-shadow .12s;
 }
-.langdd>button:hover{background:#fff}
+.langdd>button:hover{transform:translateY(-2px);box-shadow:0 6px 0 #b9cce6,0 14px 24px -8px #1c233550}
+.langdd>button:active,.langdd.open>button{transform:translateY(3px);box-shadow:0 1px 0 #b9cce6,0 4px 10px -6px #1c233540}
 .langdd>button svg{width:16px;height:16px}
 .langdd .menu{
   position:absolute;right:0;top:calc(100% + 8px);min-width:170px;padding:6px;border-radius:14px;

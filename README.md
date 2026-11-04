@@ -15,6 +15,7 @@ public/                     le site statique (servi tel quel)
 │   ├── lang.js             détection et changement de langue, menu déroulant
 │   ├── release.js          dernière release : version, tailles, notes (via /api/latest)
 │   ├── markdown.js         mini-rendu sécurisé des notes de release
+│   ├── smooth-scroll.js    défilement fluide (molette et liens d'ancre)
 │   ├── ui.js               nav au défilement, capture inclinée, bandeau, onglets, apparitions
 │   ├── dom.js              raccourcis DOM partagés
 │   └── i18n/               une langue par fichier (fr, en, es, ru, it) + index.js

@@ -1,7 +1,6 @@
 export default {
   title:"Misty – Minecraft Launcher", locale:"en-US",
   nav_features:"Features", nav_how:"How it works", nav_news:"What's new", nav_faq:"FAQ", nav_download:"Download",
-  eyebrow:"Minecraft launcher",
   hero_sub:"The light, fast and elegant Minecraft launcher. Every version, every mod loader: pick, click, play.",
   trust1:"100% free", trust2:"Written in Rust", trust3:"Windows 10 & 11",
   chip1_t:"Ultra light", chip1_s:"Very little RAM",
