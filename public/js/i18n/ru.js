@@ -1,7 +1,6 @@
 export default {
   title:"Misty – лаунчер для Minecraft", locale:"ru-RU",
   nav_features:"Возможности", nav_how:"Как это работает", nav_news:"Новости", nav_faq:"FAQ", nav_download:"Скачать",
-  eyebrow:"Лаунчер Minecraft",
   hero_sub:"Лёгкий, быстрый и элегантный лаунчер для Minecraft. Все версии, все загрузчики модов: выберите, нажмите, играйте.",
   trust1:"100% бесплатно", trust2:"Написан на Rust", trust3:"Windows 10 и 11",
   chip1_t:"Очень лёгкий", chip1_s:"Минимум ОЗУ",

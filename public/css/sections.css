@@ -11,7 +11,7 @@
 @keyframes float{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-22px) rotate(8deg)}}
 .hero{text-align:center;padding:clamp(40px,7vw,80px) 0 0;position:relative}
 .hero h1{
-  font-size:clamp(64px,13vw,150px);line-height:.95;color:#fff;font-weight:700;margin-top:22px;
+  font-size:clamp(64px,13vw,150px);line-height:.95;color:#fff;font-weight:700;
   text-shadow:
     .035em 0 var(--navy-2),-.035em 0 var(--navy-2),0 .035em var(--navy-2),0 -.035em var(--navy-2),
     .035em .035em var(--navy-2),-.035em -.035em var(--navy-2),.035em -.035em var(--navy-2),-.035em .035em var(--navy-2),

@@ -10,18 +10,25 @@
   --r:22px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:#1c2335 #ffffff40;scroll-padding-top:96px}
+html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:#5b7fb0 #e2ecf8;scroll-padding-top:96px}
 body{
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);min-height:100vh;
   background:var(--mist);overflow-x:hidden;line-height:1.6;-webkit-font-smoothing:antialiased;
 }
 img{max-width:100%}
 a{color:inherit}
-::selection{background:#1c2335;color:#fff;text-shadow:none}
-::-webkit-scrollbar{width:14px;height:14px}
-::-webkit-scrollbar-track{background:#dbe7f6}
-::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#2a3550,#1c2335);border-radius:999px;border:3px solid transparent;background-clip:padding-box}
-::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#3a4a70,#273250);background-clip:padding-box;border:3px solid transparent}
+::selection{background:rgba(28,35,53,.72);color:#fff;text-shadow:none}
+
+/* Scrollbar : piste brume, curseur bleu acier en relief façon bloc */
+::-webkit-scrollbar{width:12px;height:12px}
+::-webkit-scrollbar-track{background:#e2ecf8;border-left:1px solid #d3e1f2}
+::-webkit-scrollbar-thumb{
+  background:linear-gradient(90deg,#7a9cc9,#5b7fb0 55%,#4a6c9c);border-radius:4px;
+  border:2px solid #e2ecf8;box-shadow:inset 0 1px 0 #ffffff59,inset 0 -2px 0 #00000026;
+}
+::-webkit-scrollbar-thumb:hover{background:linear-gradient(90deg,#5b7fb0,#2f4a75)}
+::-webkit-scrollbar-thumb:active{background:var(--navy)}
+::-webkit-scrollbar-corner{background:#e2ecf8}
 
 .wrap{max-width:1200px;margin:0 auto;padding:0 clamp(16px,4vw,48px)}
 .pix{font-family:Silkscreen,monospace;letter-spacing:.02em}
