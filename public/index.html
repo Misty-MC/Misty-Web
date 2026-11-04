@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Misty – Launcher Minecraft</title>
+<meta name="description" content="Misty, un launcher Minecraft léger écrit en Rust : profils, mods Modrinth et CurseForge, modpacks, tous les mod loaders.">
+<link rel="icon" href="/assets/icone.png">
+<style>
+@font-face{font-family:Silkscreen;src:url(/assets/Silkscreen-Regular.ttf);font-weight:400;font-display:swap}
+@font-face{font-family:Silkscreen;src:url(/assets/Silkscreen-Bold.ttf);font-weight:700;font-display:swap}
+:root{
+  --navy:#1c2335;--ink:#1c2335;--muted:#44526b;
+  --glass:rgba(255,255,255,.45);--glass-strong:rgba(255,255,255,.7);--edge:rgba(255,255,255,.65);
+  --accent:#1c2335;--shadow:0 12px 40px rgba(28,35,53,.25);
+}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;
+  background:linear-gradient(135deg,#bad6f7 0%,#95b9e4 45%,#5b7fb0 100%) fixed;
+  overflow-x:hidden;line-height:1.55;
+}
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(10px)}
+.orb.a{width:620px;height:620px;left:-180px;top:-160px;background:radial-gradient(circle,#e4f1ff99,#e4f1ff00 65%)}
+.orb.b{width:700px;height:700px;right:-220px;bottom:-240px;background:radial-gradient(circle,#3f4a5eaa,#3f4a5e00 62%)}
+main,header,footer{position:relative;z-index:1}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+.pix{font-family:Silkscreen,monospace;letter-spacing:.02em}
+.glass{
+  background:var(--glass);border:1px solid var(--edge);border-radius:22px;
+  backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);box-shadow:var(--shadow);
+}
+nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
+.brand{display:flex;align-items:center;gap:12px;font-size:26px;font-weight:700;color:var(--navy);text-decoration:none}
+.brand img{width:40px;height:40px;border-radius:10px}
+.navlinks{display:flex;gap:6px;padding:6px;border-radius:999px}
+.navlinks a{color:var(--navy);text-decoration:none;font-weight:600;font-size:14px;padding:8px 16px;border-radius:999px;transition:.2s}
+.navlinks a:hover{background:#ffffff80}
+.hero{text-align:center;padding:64px 0 40px}
+.hero img.logo{width:120px;height:120px;border-radius:28px;box-shadow:var(--shadow);animation:float 5s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-10px)}}
+.hero h1{font-size:clamp(44px,9vw,92px);color:var(--navy);margin:22px 0 8px;line-height:1;text-shadow:0 4px 0 #ffffff80}
+.hero p.sub{max-width:620px;margin:0 auto;font-size:19px;color:var(--muted)}
+.badge{display:inline-block;margin-top:22px;padding:6px 16px;border-radius:999px;font-size:13px;font-weight:700;color:var(--navy);background:#ffffff99;border:1px solid var(--edge)}
+.badge i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#1bd96a;margin-right:8px;box-shadow:0 0 8px #1bd96a}
+.cta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:34px}
+.btn{
+  display:inline-flex;align-items:center;gap:12px;text-decoration:none;font-weight:700;font-size:16px;
+  padding:16px 28px;border-radius:16px;transition:transform .15s,box-shadow .15s,background .15s;cursor:pointer;border:0;
+}
+.btn small{display:block;font-weight:500;font-size:12px;opacity:.75}
+.btn.primary{background:var(--navy);color:#fff;box-shadow:0 8px 24px rgba(28,35,53,.4)}
+.btn.primary:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(28,35,53,.45)}
+.btn.ghost{background:var(--glass-strong);color:var(--navy);border:1px solid var(--edge)}
+.btn.ghost:hover{transform:translateY(-3px);background:#fff}
+.btn svg{width:22px;height:22px;flex:none}
+section{padding:40px 0}
+h2{font-size:clamp(22px,4vw,32px);color:var(--navy);margin-bottom:22px;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.card{padding:24px;transition:transform .2s}
+.card:hover{transform:translateY(-4px)}
+.card .ico{font-size:28px;margin-bottom:8px}
+.card h3{font-family:Silkscreen,monospace;font-size:15px;color:var(--navy);margin-bottom:6px}
+.card p{font-size:14.5px;color:var(--muted)}
+.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.dl .card{display:flex;flex-direction:column;gap:12px}
+.dl .card p{flex:1}
+.dl .meta{font-size:13px;color:var(--muted)}
+.log{padding:26px;max-width:760px;margin:0 auto}
+.log h3{font-family:Silkscreen,monospace;color:var(--navy);margin-bottom:10px}
+.log pre{white-space:pre-wrap;font:14.5px/1.6 system-ui,sans-serif;color:var(--ink)}
+footer{text-align:center;padding:40px 0 50px;font-size:13px;color:#1c2335cc}
+footer a{color:inherit}
+@media(max-width:620px){.navlinks a:not(.keep){display:none}}
+</style>
+</head>
+<body>
+<div class="orb a"></div><div class="orb b"></div>
+
+<header class="wrap">
+  <nav>
+    <a class="brand pix" href="#"><img src="/assets/icone.png" alt="">Misty</a>
+    <div class="navlinks glass">
+      <a href="#features">Fonctionnalités</a>
+      <a href="#changelog">Nouveautés</a>
+      <a class="keep" href="#download">Télécharger</a>
+    </div>
+  </nav>
+</header>
+
+<main>
+<div class="wrap">
+  <div class="hero">
+    <img class="logo" src="/assets/icone.png" alt="Logo Misty">
+    <h1 class="pix">Misty</h1>
+    <p class="sub">Le launcher Minecraft léger, rapide et élégant. Un seul fichier, aucune installation compliquée.</p>
+    <span class="badge"><i></i>Dernière version : <span id="ver">…</span></span>
+    <div class="cta">
+      <a class="btn primary" href="/download/setup" id="btn-setup">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 20h16"/></svg>
+        <span>Télécharger l'installeur<small id="size-setup">Windows 10/11 · .exe</small></span>
+      </a>
+      <a class="btn ghost" href="/download/portable" id="btn-portable">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>
+        <span>Version portable<small id="size-portable">Archive .zip</small></span>
+      </a>
+    </div>
+  </div>
+
+  <section id="features">
+    <h2 class="pix">Fonctionnalités</h2>
+    <div class="grid">
+      <div class="card glass"><div class="ico">🎮</div><h3>Toutes les versions</h3><p>Releases, snapshots, bêtas et alphas : jouez à n'importe quelle version de Minecraft.</p></div>
+      <div class="card glass"><div class="ico">📁</div><h3>Profils</h3><p>Chaque profil a sa version, son mod loader et son dossier. Les bibliothèques restent partagées.</p></div>
+      <div class="card glass"><div class="ico">🧩</div><h3>Modrinth &amp; CurseForge</h3><p>Mods, packs de ressources, datapacks et shaders, avec leurs dépendances.</p></div>
+      <div class="card glass"><div class="ico">📦</div><h3>Modpacks</h3><p>Importez un modpack Modrinth ou CurseForge : un clic et le profil est prêt.</p></div>
+      <div class="card glass"><div class="ico">⚙️</div><h3>Mod loaders</h3><p>Forge, NeoForge, Fabric, Quilt, OptiFine et LiteLoader.</p></div>
+      <div class="card glass"><div class="ico">🎨</div><h3>Éditeur de textures</h3><p>Créez vos packs de textures directement dans le launcher (expérimental).</p></div>
+      <div class="card glass"><div class="ico">🔐</div><h3>Comptes</h3><p>Connexion Microsoft ou comptes hors-ligne, au choix.</p></div>
+      <div class="card glass"><div class="ico">🪶</div><h3>Ultra léger</h3><p>Écrit en Rust, consomme très peu de RAM. Mises à jour automatiques, FR/EN, Discord Rich Presence.</p></div>
+    </div>
+  </section>
+
+  <section id="download">
+    <h2 class="pix">Télécharger</h2>
+    <div class="dl">
+      <div class="card glass">
+        <h3>Installeur</h3>
+        <p>Recommandé. S'installe dans votre profil sans droits administrateur, avec raccourci menu Démarrer et désinstallation propre.</p>
+        <div class="meta" id="meta-setup">Misty-Setup · Windows 10/11</div>
+        <a class="btn primary" href="/download/setup">Télécharger le Setup</a>
+      </div>
+      <div class="card glass">
+        <h3>Portable</h3>
+        <p>Aucune installation : extrayez l'archive et lancez <b>Misty.exe</b>. Idéal pour une clé USB.</p>
+        <div class="meta" id="meta-portable">Misty · archive .zip</div>
+        <a class="btn ghost" href="/download/portable">Télécharger le portable</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="changelog">
+    <h2 class="pix">Nouveautés</h2>
+    <div class="log glass">
+      <h3 id="log-title">Chargement…</h3>
+      <pre id="log-body"></pre>
+    </div>
+  </section>
+</div>
+</main>
+
+<footer class="wrap">
+  <p>Misty n'est pas affilié à Mojang Studios ni à Microsoft. Minecraft est une marque de Mojang AB.</p>
+</footer>
+
+<script>
+const fmt = b => b ? (b / 1048576).toFixed(1).replace(".", ",") + " Mo" : "";
+fetch("/api/latest").then(r => r.json()).then(d => {
+  if (d.error) throw 0;
+  document.getElementById("ver").textContent = d.version;
+  const date = new Date(d.date).toLocaleDateString("fr-FR", {day:"numeric", month:"long", year:"numeric"});
+  document.getElementById("size-setup").textContent = `v${d.version} · ${fmt(d.setupSize)} · Windows 10/11`;
+  document.getElementById("size-portable").textContent = `v${d.version} · ${fmt(d.portableSize)} · .zip`;
+  document.getElementById("meta-setup").textContent = `Version ${d.version} · ${fmt(d.setupSize)}`;
+  document.getElementById("meta-portable").textContent = `Version ${d.version} · ${fmt(d.portableSize)}`;
+  document.getElementById("log-title").textContent = `Version ${d.version} · ${date}`;
+  document.getElementById("log-body").textContent = d.notes.trim() || "Voir les améliorations de cette version dans le launcher.";
+}).catch(() => {
+  document.getElementById("ver").textContent = "dernière";
+  document.getElementById("log-title").textContent = "Notes indisponibles";
+});
+</script>
+</body>
+</html>
