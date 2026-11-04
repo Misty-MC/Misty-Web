@@ -1,0 +1,76 @@
+/* Mise en page : en-tête / navigation et pied de page */
+/* ---------- Navigation ---------- */
+header{position:sticky;top:0;z-index:50;padding:14px 0}
+nav{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 8px 8px 16px;
+  border-radius:18px;transition:box-shadow .3s,background .3s;
+}
+header.scrolled nav{background:rgba(255,255,255,.72);box-shadow:0 10px 40px rgba(28,35,53,.16)}
+.brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:700;color:var(--navy);text-decoration:none}
+.brand img{width:34px;height:34px;image-rendering:pixelated}
+.navlinks{display:flex;gap:2px}
+.navlinks a{color:var(--navy);text-decoration:none;font-weight:600;font-size:14px;padding:9px 14px;border-radius:10px;transition:background .2s}
+.navlinks a:hover{background:#ffffffb3}
+.navright{display:flex;align-items:center;gap:8px}
+
+.langdd{position:relative}
+.langdd>button{
+  display:flex;align-items:center;gap:6px;font-family:Silkscreen,monospace;font-size:12px;color:var(--navy);
+  background:#ffffff99;border:1px solid var(--edge);border-radius:12px;padding:9px 12px;cursor:pointer;
+}
+.langdd>button:hover{background:#fff}
+.langdd>button svg{width:16px;height:16px}
+.langdd .menu{
+  position:absolute;right:0;top:calc(100% + 8px);min-width:170px;padding:6px;border-radius:14px;
+  background:#fff;box-shadow:0 20px 50px rgba(28,35,53,.25);border:1px solid #e3ecf8;
+  opacity:0;visibility:hidden;transform:translateY(-6px);transition:.18s;
+}
+.langdd.open .menu{opacity:1;visibility:visible;transform:none}
+.menu button{
+  display:flex;justify-content:space-between;width:100%;gap:16px;font:600 14px system-ui,sans-serif;color:var(--navy);
+  background:none;border:0;padding:9px 12px;border-radius:9px;cursor:pointer;text-align:left;
+}
+.menu button span{font-family:Silkscreen,monospace;font-size:11px;opacity:.5}
+.menu button:hover{background:var(--mist)}
+.menu button[aria-pressed="true"]{background:var(--navy);color:#fff}
+.menu button[aria-pressed="true"] span{opacity:.7}
+
+/* ---------- Footer ---------- */
+footer{
+  position:relative;margin-top:clamp(64px,9vw,112px);color:#c5d3ea;overflow:hidden;
+  background:radial-gradient(900px 400px at 85% 0%,#2f80ed33,transparent 70%),linear-gradient(180deg,#1c2335,#141a29);
+}
+footer::before{content:"";position:absolute;inset:0 0 auto;height:1px;background:linear-gradient(90deg,transparent,#ffffff40,transparent)}
+.fgrid{display:grid;grid-template-columns:1.6fr repeat(3,1fr);gap:clamp(28px,4vw,56px);padding:clamp(56px,7vw,88px) 0 48px}
+footer .brand{color:#fff;font-size:24px}
+.fabout p{margin:16px 0 22px;max-width:320px;font-size:15px;color:#9fb0cc}
+.status{display:inline-flex;align-items:center;gap:10px;padding:9px 14px;border-radius:12px;background:#ffffff0d;border:1px solid #ffffff1f;font-size:13px}
+.status b{color:#fff;font-family:Silkscreen,monospace;font-weight:400}
+footer h4{font-family:Silkscreen,monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#fff;margin-bottom:18px;font-weight:400}
+footer ul{list-style:none;display:flex;flex-direction:column;gap:11px}
+footer ul a{text-decoration:none;font-size:15px;color:#9fb0cc;transition:color .2s;display:inline-flex;align-items:center;gap:6px}
+footer ul a:hover{color:#fff}
+footer ul a svg{width:14px;height:14px;opacity:.6}
+.flangs{display:flex;flex-wrap:wrap;gap:6px}
+.flangs button{
+  font-family:Silkscreen,monospace;font-size:11px;color:#c5d3ea;background:#ffffff0d;border:1px solid #ffffff1f;
+  padding:7px 10px;border-radius:9px;cursor:pointer;transition:.2s;
+}
+.flangs button:hover{background:#ffffff1f;color:#fff}
+.flangs button[aria-pressed="true"]{background:#fff;color:var(--navy);border-color:#fff}
+.giant{
+  font-family:Silkscreen,monospace;font-weight:700;text-align:center;line-height:.78;user-select:none;pointer-events:none;
+  font-size:clamp(90px,24vw,330px);letter-spacing:-.02em;margin-bottom:-.06em;
+  background:linear-gradient(180deg,#ffffff2b,#ffffff03 85%);-webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.fbottom{
+  display:flex;justify-content:space-between;align-items:center;gap:12px 24px;flex-wrap:wrap;
+  padding:22px 0;border-top:1px solid #ffffff1a;font-size:13px;color:#8193b2;position:relative;z-index:1;
+}
+.fbottom .legal{max-width:620px}
+.totop{
+  display:inline-flex;align-items:center;gap:8px;color:#fff;text-decoration:none;font-weight:600;font-size:13px;
+  padding:9px 14px;border-radius:11px;background:#ffffff0d;border:1px solid #ffffff1f;transition:background .2s;
+}
+.totop:hover{background:#ffffff1f}
+.totop svg{width:14px;height:14px}

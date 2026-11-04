@@ -5,421 +5,324 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Misty – Launcher Minecraft</title>
 <meta name="description" content="Misty, un launcher Minecraft léger écrit en Rust : profils, mods Modrinth et CurseForge, modpacks, tous les mod loaders.">
+<meta name="theme-color" content="#1c2335">
 <link rel="icon" href="/assets/icone.png">
-<style>
-@font-face{font-family:Silkscreen;src:url(/assets/Silkscreen-Regular.ttf);font-weight:400;font-display:swap}
-@font-face{font-family:Silkscreen;src:url(/assets/Silkscreen-Bold.ttf);font-weight:700;font-display:swap}
-:root{
-  --navy:#1c2335;--ink:#1c2335;--muted:#44526b;
-  --glass:rgba(255,255,255,.45);--glass-strong:rgba(255,255,255,.7);--edge:rgba(255,255,255,.65);
-  --shadow:0 12px 40px rgba(28,35,53,.25);
-}
-*{box-sizing:border-box;margin:0}
-html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:#1c2335 #ffffff40}
-body{
-  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;
-  background:linear-gradient(135deg,#bad6f7 0%,#95b9e4 45%,#5b7fb0 100%) fixed;
-  overflow-x:hidden;line-height:1.6;
-}
-
-/* Sélection de texte */
-::selection{background:#1c2335;color:#fff;text-shadow:none}
-::-moz-selection{background:#1c2335;color:#fff;text-shadow:none}
-
-/* Scrollbar */
-::-webkit-scrollbar{width:14px;height:14px}
-::-webkit-scrollbar-track{background:#ffffff40;border-left:1px solid #ffffff66}
-::-webkit-scrollbar-thumb{
-  background:linear-gradient(180deg,#2a3550,#1c2335);
-  border-radius:999px;border:3px solid transparent;background-clip:padding-box;
-}
-::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#3a4a70,#273250);background-clip:padding-box;border:3px solid transparent}
-::-webkit-scrollbar-corner{background:transparent}
-
-.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(10px)}
-.orb.a{width:620px;height:620px;left:-180px;top:-160px;background:radial-gradient(circle,#e4f1ff99,#e4f1ff00 65%)}
-.orb.b{width:700px;height:700px;right:-220px;bottom:-240px;background:radial-gradient(circle,#3f4a5eaa,#3f4a5e00 62%)}
-main,header,footer{position:relative;z-index:1}
-.wrap{max-width:1180px;margin:0 auto;padding:0 clamp(20px,4vw,48px)}
-.pix{font-family:Silkscreen,monospace;letter-spacing:.02em}
-.glass{
-  background:var(--glass);border:1px solid var(--edge);border-radius:22px;
-  backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);box-shadow:var(--shadow);
-}
-
-/* Navigation */
-nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 0}
-.brand{display:flex;align-items:center;gap:12px;font-size:26px;font-weight:700;color:var(--navy);text-decoration:none}
-.brand img{width:40px;height:40px;border-radius:10px}
-.navright{display:flex;align-items:center;gap:10px}
-.navlinks{display:flex;gap:4px;padding:6px;border-radius:999px}
-.navlinks a{color:var(--navy);text-decoration:none;font-weight:600;font-size:14px;padding:8px 16px;border-radius:999px;transition:.2s}
-.navlinks a:hover{background:#ffffff80}
-
-/* Sélecteur de langue */
-.lang{display:flex;gap:2px;padding:5px;border-radius:999px}
-.lang button{
-  font-family:Silkscreen,monospace;font-size:11px;color:var(--navy);background:transparent;border:0;cursor:pointer;
-  padding:8px 11px;border-radius:999px;transition:.2s;letter-spacing:.04em
-}
-.lang button:hover{background:#ffffff80}
-.lang button[aria-pressed="true"]{background:var(--navy);color:#fff}
-.lang button:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
-
-.btn{
-  display:inline-flex;align-items:center;gap:12px;text-decoration:none;font-weight:700;font-size:16px;
-  padding:16px 28px;border-radius:16px;transition:transform .15s,box-shadow .15s,background .15s;cursor:pointer;border:0;
-}
-.btn small{display:block;font-weight:500;font-size:12px;opacity:.75}
-.btn.primary{background:var(--navy);color:#fff;box-shadow:0 8px 24px rgba(28,35,53,.4)}
-.btn.primary:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(28,35,53,.45)}
-.btn.ghost{background:var(--glass-strong);color:var(--navy);border:1px solid var(--edge)}
-.btn.ghost:hover{transform:translateY(-3px);background:#fff}
-.btn.sm{padding:10px 20px;font-size:14px;border-radius:999px}
-.btn svg{width:22px;height:22px;flex:none}
-
-/* Hero */
-.hero{text-align:center;padding:56px 0 24px}
-.hero h1{font-size:clamp(46px,9vw,96px);color:var(--navy);line-height:1;text-shadow:0 4px 0 #ffffff80}
-.hero p.sub{max-width:660px;margin:18px auto 0;font-size:clamp(17px,2vw,21px);color:var(--muted)}
-.badge{display:inline-block;margin-top:22px;padding:6px 16px;border-radius:999px;font-size:13px;font-weight:700;color:var(--navy);background:#ffffff99;border:1px solid var(--edge)}
-.badge i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#1bd96a;margin-right:8px;box-shadow:0 0 8px #1bd96a}
-.cta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:30px}
-.shot{display:block;width:100%;height:auto;border-radius:18px;box-shadow:0 24px 60px rgba(28,35,53,.35);border:1px solid var(--edge)}
-.hero .shot{margin-top:48px}
-
-/* Sections */
-section{padding:56px 0}
-h2{font-size:clamp(22px,4vw,34px);color:var(--navy);margin-bottom:12px}
-.center{text-align:center}
-.lead{max-width:640px;margin:0 auto 34px;color:var(--muted);font-size:17px}
-
-.feature{display:grid;grid-template-columns:1fr 1.25fr;gap:clamp(24px,5vw,56px);align-items:center;padding:36px 0}
-.feature.rev{grid-template-columns:1.25fr 1fr}
-.feature.rev .txt{order:2}
-.feature .txt h3{font-family:Silkscreen,monospace;font-size:clamp(18px,2.4vw,24px);color:var(--navy);margin-bottom:12px}
-.feature .txt p{color:var(--muted);font-size:17px}
-.feature .txt ul{margin:14px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:8px}
-.feature .txt li{font-family:Silkscreen,monospace;font-size:11px;padding:6px 12px;border-radius:999px;background:#ffffff99;border:1px solid var(--edge);color:var(--navy)}
-
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
-@media(min-width:1000px){.grid{grid-template-columns:repeat(4,1fr)}}
-.card{padding:26px;transition:transform .2s}
-.card:hover{transform:translateY(-4px)}
-.card .ico{font-size:28px;margin-bottom:8px}
-.card h3{font-family:Silkscreen,monospace;font-size:15px;color:var(--navy);margin-bottom:6px}
-.card p{font-size:15px;color:var(--muted)}
-
-.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px;max-width:900px;margin:0 auto}
-.dl .card{display:flex;flex-direction:column;gap:12px;padding:30px}
-.dl .card p{flex:1}
-.dl .meta{font-size:13px;color:var(--muted)}
-
-.log{padding:26px;max-width:800px;margin:0 auto}
-.log h3{font-family:Silkscreen,monospace;color:var(--navy);margin-bottom:10px}
-.log pre{white-space:pre-wrap;font:15px/1.6 system-ui,sans-serif;color:var(--ink)}
-
-footer{text-align:center;padding:40px 0 50px;font-size:13px;color:#1c2335cc}
-footer .brand{justify-content:center;margin-bottom:12px;font-size:22px}
-
-@media(max-width:820px){
-  .feature,.feature.rev{grid-template-columns:1fr}
-  .feature.rev .txt{order:0}
-}
-@media(max-width:700px){.navlinks,.nav-dl{display:none}}
-@media(max-width:420px){.lang button{padding:7px 8px}.brand{font-size:22px}}
-</style>
+<link rel="preload" href="/assets/Silkscreen-Bold.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/layout.css">
+<link rel="stylesheet" href="/css/sections.css">
+<link rel="stylesheet" href="/css/responsive.css">
+<script>document.documentElement.classList.add("js")</script>
+<script type="module" src="/js/main.js"></script>
 </head>
 <body>
-<div class="orb a"></div><div class="orb b"></div>
 
-<header class="wrap">
-  <nav>
-    <a class="brand pix" href="#"><img src="/assets/icone.png" alt="">Misty</a>
-    <div class="navright">
-      <div class="navlinks glass">
+<div class="hero-bg" aria-hidden="true">
+  <div class="cube" style="width:34px;height:34px;left:8%;top:18%"></div>
+  <div class="cube" style="width:18px;height:18px;left:22%;top:42%;animation-delay:-2s"></div>
+  <div class="cube" style="width:26px;height:26px;right:12%;top:14%;animation-delay:-4s"></div>
+  <div class="cube" style="width:14px;height:14px;right:24%;top:36%;animation-delay:-6s"></div>
+  <div class="cube" style="width:22px;height:22px;left:4%;top:62%;animation-delay:-1s"></div>
+  <div class="cube" style="width:30px;height:30px;right:5%;top:52%;animation-delay:-5s"></div>
+</div>
+
+<header id="top">
+  <div class="wrap">
+    <nav>
+      <a class="brand pix" href="#top"><img src="/assets/icone.png" alt="" width="34" height="34">Misty</a>
+      <div class="navlinks">
         <a href="#features" data-i18n="nav_features"></a>
+        <a href="#steps" data-i18n="nav_how"></a>
         <a href="#changelog" data-i18n="nav_news"></a>
-        <a href="#download" data-i18n="nav_download"></a>
+        <a href="#faq" data-i18n="nav_faq"></a>
       </div>
-      <div class="lang glass" role="group" aria-label="Language">
-        <button type="button" data-lang="fr" aria-pressed="false">FR</button>
-        <button type="button" data-lang="en" aria-pressed="false">EN</button>
-        <button type="button" data-lang="es" aria-pressed="false">ES</button>
-        <button type="button" data-lang="ru" aria-pressed="false">RU</button>
-        <button type="button" data-lang="it" aria-pressed="false">IT</button>
+      <div class="navright">
+        <div class="langdd" id="langdd">
+          <button type="button" aria-haspopup="true" aria-expanded="false" aria-label="Language">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+            <span id="lang-cur">FR</span>
+          </button>
+          <div class="menu" role="menu">
+            <button type="button" data-lang="fr" aria-pressed="false">Français<span>FR</span></button>
+            <button type="button" data-lang="en" aria-pressed="false">English<span>EN</span></button>
+            <button type="button" data-lang="es" aria-pressed="false">Español<span>ES</span></button>
+            <button type="button" data-lang="ru" aria-pressed="false">Русский<span>RU</span></button>
+            <button type="button" data-lang="it" aria-pressed="false">Italiano<span>IT</span></button>
+          </div>
+        </div>
+        <a class="btn play sm nav-dl" href="#download">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 20h16"/></svg>
+          <span data-i18n="nav_download"></span>
+        </a>
       </div>
-      <a class="btn primary sm nav-dl" href="/download/setup" data-i18n="nav_download"></a>
-    </div>
-  </nav>
+    </nav>
+  </div>
 </header>
 
 <main>
-<div class="wrap">
+  <div class="wrap">
+    <div class="hero">
+      <span class="eyebrow"><i class="dot"></i><span data-i18n="eyebrow"></span> · <span class="ver-txt">…</span></span>
+      <h1 class="pix">Misty</h1>
+      <p class="sub" data-i18n="hero_sub"></p>
+      <div class="cta">
+        <a class="btn play" href="/download/setup">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 20h16"/></svg>
+          <span><span data-i18n="btn_installer"></span><small id="size-setup">Windows 10/11 · .exe</small></span>
+        </a>
+        <a class="btn ghost" href="/download/portable">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>
+          <span><span data-i18n="btn_portable"></span><small id="size-portable">.zip</small></span>
+        </a>
+      </div>
+      <div class="trust">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg><span data-i18n="trust1"></span></span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg><span data-i18n="trust2"></span></span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg><span data-i18n="trust3"></span></span>
+      </div>
 
-  <div class="hero">
-    <h1 class="pix">Misty</h1>
-    <p class="sub" data-i18n="hero_sub"></p>
-    <span class="badge"><i></i><span data-i18n="latest"></span> <span id="ver">…</span></span>
-    <div class="cta">
-      <a class="btn primary" href="/download/setup" id="btn-setup">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 20h16"/></svg>
-        <span><span data-i18n="btn_installer"></span><small id="size-setup">Windows 10/11 · .exe</small></span>
-      </a>
-      <a class="btn ghost" href="/download/portable" id="btn-portable">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>
-        <span><span data-i18n="btn_portable"></span><small id="size-portable">.zip</small></span>
-      </a>
+      <div class="stage" id="stage">
+        <div class="window"><img data-shot="home" data-i18n-alt="alt_home" alt="" width="1180" height="720" fetchpriority="high"></div>
+        <div class="chip c1"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></span><span><span data-i18n="chip1_t"></span><small data-i18n="chip1_s"></small></span></div>
+        <div class="chip c2"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg></span><span><span data-i18n="chip2_t"></span><small data-i18n="chip2_s"></small></span></div>
+      </div>
     </div>
-    <img class="shot" data-shot="home" data-i18n-alt="alt_home" alt="" width="1180" height="720">
+  </div>
+
+  <div class="marquee-sec">
+    <p data-i18n="compat"></p>
+    <div class="marquee" aria-hidden="true">
+      <div class="track" id="track">
+        <span class="tag"><i style="--c:#dfa86a"></i>Forge</span>
+        <span class="tag"><i style="--c:#f68a3c"></i>NeoForge</span>
+        <span class="tag"><i style="--c:#c6bca5"></i>Fabric</span>
+        <span class="tag"><i style="--c:#a77ad9"></i>Quilt</span>
+        <span class="tag"><i style="--c:#e05a4f"></i>OptiFine</span>
+        <span class="tag"><i style="--c:#6aa4e0"></i>LiteLoader</span>
+        <span class="tag"><i style="--c:#1bd96a"></i>Modrinth</span>
+        <span class="tag"><i style="--c:#f16436"></i>CurseForge</span>
+        <span class="tag"><i style="--c:#5865f2"></i>Discord RPC</span>
+        <span class="tag"><i style="--c:#2f80ed"></i>Microsoft</span>
+      </div>
+    </div>
   </div>
 
   <section id="features">
-    <h2 class="pix center" data-i18n="features_title"></h2>
-    <p class="lead center" data-i18n="features_lead"></p>
-
-    <div class="feature">
-      <div class="txt">
-        <h3 data-i18n="f1_t"></h3>
-        <p data-i18n="f1_p"></p>
-        <ul><li>Forge</li><li>NeoForge</li><li>Fabric</li><li>Quilt</li><li>OptiFine</li><li>LiteLoader</li></ul>
+    <div class="wrap">
+      <div class="stats reveal">
+        <div class="stat glass"><b>6</b><span data-i18n="st1"></span></div>
+        <div class="stat glass"><b>2</b><span data-i18n="st2"></span></div>
+        <div class="stat glass"><b>0</b><span data-i18n="st3"></span></div>
+        <div class="stat glass"><b>100%</b><span data-i18n="st4"></span></div>
       </div>
-      <img class="shot" data-shot="profiles" data-i18n-alt="alt_profiles" alt="" width="1180" height="720" loading="lazy">
-    </div>
 
-    <div class="feature rev">
-      <div class="txt">
-        <h3 data-i18n="f2_t"></h3>
-        <p data-i18n="f2_p"></p>
+      <div class="head reveal" style="margin-top:clamp(64px,9vw,112px)">
+        <span class="eyebrow" data-i18n="features_title"></span>
+        <h2 data-i18n="features_h"></h2>
+        <p data-i18n="features_lead"></p>
       </div>
-      <img class="shot" data-shot="home" data-i18n-alt="alt_version" alt="" width="1180" height="720" loading="lazy">
-    </div>
 
-    <div class="feature">
-      <div class="txt">
-        <h3 data-i18n="f3_t"></h3>
-        <p data-i18n="f3_p"></p>
-        <ul><li data-i18n="experimental"></li></ul>
+      <div class="showcase reveal" id="showcase">
+        <div class="tabs" role="tablist">
+          <button class="tab on" role="tab" data-tab="profiles" aria-selected="true">
+            <h3><span class="n">01</span><span data-i18n="f1_t"></span></h3>
+            <div class="body"><div>
+              <p data-i18n="f1_p"></p>
+              <ul><li>Forge</li><li>NeoForge</li><li>Fabric</li><li>Quilt</li><li>OptiFine</li><li>LiteLoader</li></ul>
+            </div></div>
+            <span class="bar"><i></i></span>
+          </button>
+          <button class="tab" role="tab" data-tab="home" aria-selected="false">
+            <h3><span class="n">02</span><span data-i18n="f2_t"></span></h3>
+            <div class="body"><div>
+              <p data-i18n="f2_p"></p>
+              <ul><li>Modrinth</li><li>CurseForge</li><li>Shaders</li><li>Datapacks</li></ul>
+            </div></div>
+            <span class="bar"><i></i></span>
+          </button>
+          <button class="tab" role="tab" data-tab="textures" aria-selected="false">
+            <h3><span class="n">03</span><span data-i18n="f3_t"></span></h3>
+            <div class="body"><div>
+              <p data-i18n="f3_p"></p>
+              <ul><li data-i18n="experimental"></li><li>.zip</li><li>Paint.NET</li></ul>
+            </div></div>
+            <span class="bar"><i></i></span>
+          </button>
+        </div>
+        <div class="screens">
+          <img class="on" data-shot="profiles" data-pane="profiles" data-i18n-alt="alt_profiles" alt="" width="1180" height="720" loading="lazy">
+          <img data-shot="home" data-pane="home" data-i18n-alt="alt_version" alt="" width="1180" height="720" loading="lazy">
+          <img data-shot="textures" data-pane="textures" data-i18n-alt="alt_textures" alt="" width="1180" height="720" loading="lazy">
+        </div>
       </div>
-      <img class="shot" data-shot="textures" data-i18n-alt="alt_textures" alt="" width="1180" height="720" loading="lazy">
-    </div>
 
-    <div class="grid" style="margin-top:32px">
-      <div class="card glass"><div class="ico">🎮</div><h3 data-i18n="c1_t"></h3><p data-i18n="c1_p"></p></div>
-      <div class="card glass"><div class="ico">🔐</div><h3 data-i18n="c2_t"></h3><p data-i18n="c2_p"></p></div>
-      <div class="card glass"><div class="ico">🪶</div><h3 data-i18n="c3_t"></h3><p data-i18n="c3_p"></p></div>
-      <div class="card glass"><div class="ico">🌍</div><h3 data-i18n="c4_t"></h3><p data-i18n="c4_p"></p></div>
+      <div class="bento">
+        <div class="card glass wide reveal">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div>
+          <h3 data-i18n="c3_t"></h3><p data-i18n="c3_p_long"></p>
+        </div>
+        <div class="card glass reveal">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+          <h3 data-i18n="c1_t"></h3><p data-i18n="c1_p"></p>
+        </div>
+        <div class="card glass reveal">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
+          <h3 data-i18n="c2_t"></h3><p data-i18n="c2_p"></p>
+        </div>
+        <div class="card glass reveal">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></div>
+          <h3 data-i18n="c5_t"></h3><p data-i18n="c5_p"></p>
+        </div>
+        <div class="card glass reveal">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></div>
+          <h3 data-i18n="c4_t"></h3><p data-i18n="c4_p"></p>
+        </div>
+        <div class="card glass wide reveal">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg></div>
+          <h3 data-i18n="c6_t"></h3><p data-i18n="c6_p"></p>
+        </div>
+      </div>
     </div>
   </section>
 
-  <section id="download">
-    <h2 class="pix center" data-i18n="dl_title"></h2>
-    <p class="lead center" data-i18n="dl_lead"></p>
-    <div class="dl">
-      <div class="card glass">
-        <h3 data-i18n="inst_t"></h3>
-        <p data-i18n="inst_p"></p>
-        <div class="meta" id="meta-setup">Misty-Setup · Windows 10/11</div>
-        <a class="btn primary" href="/download/setup" data-i18n="dl_setup"></a>
+  <section id="steps" style="padding-top:0">
+    <div class="wrap">
+      <div class="head reveal">
+        <span class="eyebrow" data-i18n="nav_how"></span>
+        <h2 data-i18n="steps_title"></h2>
       </div>
-      <div class="card glass">
-        <h3 data-i18n="port_t"></h3>
-        <p data-i18n="port_p"></p>
-        <div class="meta" id="meta-portable">Misty · .zip</div>
-        <a class="btn ghost" href="/download/portable" data-i18n="dl_portable"></a>
+      <div class="steps">
+        <div class="step glass reveal"><span class="num">01</span><h3 data-i18n="st1_t"></h3><p data-i18n="st1_p"></p></div>
+        <div class="step glass reveal"><span class="num">02</span><h3 data-i18n="st2_t"></h3><p data-i18n="st2_p"></p></div>
+        <div class="step glass reveal"><span class="num">03</span><h3 data-i18n="st3_t"></h3><p data-i18n="st3_p"></p></div>
       </div>
     </div>
   </section>
 
-  <section id="changelog">
-    <h2 class="pix center" data-i18n="news_title"></h2>
-    <div class="log glass">
-      <h3 id="log-title"></h3>
-      <pre id="log-body"></pre>
+  <section id="download" style="padding-top:0">
+    <div class="wrap">
+      <div class="dlpanel reveal">
+        <div>
+          <span class="eyebrow"><i class="dot"></i><span data-i18n="nav_download"></span></span>
+          <h2 data-i18n="dl_title"></h2>
+          <p data-i18n="dl_lead"></p>
+          <div class="ver"><span data-i18n="latest"></span> <b class="ver-txt">…</b></div>
+        </div>
+        <div class="opts">
+          <div class="opt rec">
+            <div class="top"><h3 data-i18n="inst_t"></h3><span class="pill" data-i18n="recommended"></span></div>
+            <p data-i18n="inst_p"></p>
+            <div class="meta" id="meta-setup">Misty-Setup · .exe</div>
+            <a class="btn play" href="/download/setup">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 20h16"/></svg>
+              <span data-i18n="dl_setup"></span>
+            </a>
+          </div>
+          <div class="opt">
+            <div class="top"><h3 data-i18n="port_t"></h3></div>
+            <p data-i18n="port_p"></p>
+            <div class="meta" id="meta-portable">Misty · .zip</div>
+            <a class="btn ghost" href="/download/portable">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>
+              <span data-i18n="dl_portable"></span>
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
-</div>
+  <section id="changelog" style="padding-top:0">
+    <div class="wrap">
+      <div class="head reveal">
+        <span class="eyebrow" data-i18n="nav_news"></span>
+        <h2 data-i18n="news_title"></h2>
+      </div>
+      <div class="log glass reveal">
+        <div class="lhead">
+          <h3><i class="dot"></i><span id="log-title"></span></h3>
+          <a class="link" href="https://github.com/xTheoxreborn/Misty/releases" target="_blank" rel="noopener"><span data-i18n="log_all"></span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M8 7h9v9"/></svg></a>
+        </div>
+        <div class="lbody" id="log-body"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" style="padding-top:0">
+    <div class="wrap">
+      <div class="head reveal">
+        <span class="eyebrow">FAQ</span>
+        <h2 data-i18n="faq_title"></h2>
+      </div>
+      <div class="faq reveal">
+        <details><summary><span data-i18n="q1"></span><i></i></summary><p data-i18n="a1"></p></details>
+        <details><summary><span data-i18n="q2"></span><i></i></summary><p data-i18n="a2"></p></details>
+        <details><summary><span data-i18n="q3"></span><i></i></summary><p data-i18n="a3"></p></details>
+        <details><summary><span data-i18n="q4"></span><i></i></summary><p data-i18n="a4"></p></details>
+        <details><summary><span data-i18n="q5"></span><i></i></summary><p data-i18n="a5"></p></details>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div class="ctaband reveal">
+      <h2 data-i18n="cta_t"></h2>
+      <p data-i18n="cta_p"></p>
+      <a class="btn play" href="/download/setup">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>
+        <span data-i18n="cta_b"></span>
+      </a>
+      <div class="ground" aria-hidden="true"></div>
+    </div>
+  </div>
 </main>
 
-<footer class="wrap">
-  <a class="brand pix" href="#"><img src="/assets/icone.png" alt="" width="32" height="32">Misty</a>
-  <p data-i18n="footer"></p>
+<footer>
+  <div class="wrap">
+    <div class="fgrid">
+      <div class="fabout">
+        <a class="brand pix" href="#top"><img src="/assets/icone.png" alt="" width="34" height="34">Misty</a>
+        <p data-i18n="ft_tag"></p>
+        <span class="status"><i class="dot"></i><span data-i18n="latest"></span> <b class="ver-txt">…</b></span>
+      </div>
+      <div>
+        <h4 data-i18n="ft_product"></h4>
+        <ul>
+          <li><a href="#features" data-i18n="nav_features"></a></li>
+          <li><a href="#steps" data-i18n="nav_how"></a></li>
+          <li><a href="#changelog" data-i18n="nav_news"></a></li>
+          <li><a href="#faq" data-i18n="nav_faq"></a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 data-i18n="nav_download"></h4>
+        <ul>
+          <li><a href="/download/setup" data-i18n="inst_t"></a></li>
+          <li><a href="/download/portable" data-i18n="port_t"></a></li>
+          <li><a href="https://github.com/xTheoxreborn/Misty/releases" target="_blank" rel="noopener"><span data-i18n="ft_all"></span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M8 7h9v9"/></svg></a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 data-i18n="ft_lang"></h4>
+        <div class="flangs">
+          <button type="button" data-lang="fr" aria-pressed="false">FR</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+          <button type="button" data-lang="es" aria-pressed="false">ES</button>
+          <button type="button" data-lang="ru" aria-pressed="false">RU</button>
+          <button type="button" data-lang="it" aria-pressed="false">IT</button>
+        </div>
+      </div>
+    </div>
+    <div class="fbottom">
+      <span class="legal">© <span id="year"></span> Misty · <span data-i18n="footer"></span></span>
+      <a class="totop" href="#top"><span data-i18n="ft_top"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></a>
+    </div>
+  </div>
+  <div class="giant" aria-hidden="true">MISTY</div>
 </footer>
 
-<script>
-const T = {
-  fr: {
-    title:"Misty – Launcher Minecraft", locale:"fr-FR",
-    nav_features:"Fonctionnalités", nav_news:"Nouveautés", nav_download:"Télécharger",
-    hero_sub:"Le launcher Minecraft léger, rapide et élégant. Toutes les versions, tous les mod loaders : choisissez, cliquez, jouez.",
-    latest:"Dernière version :", btn_installer:"Télécharger l'installeur", btn_portable:"Version portable",
-    alt_home:"Écran d'accueil de Misty", alt_profiles:"Liste des profils de Misty", alt_version:"Sélection de la version et du mod loader", alt_textures:"Éditeur de packs de textures",
-    features_title:"Fonctionnalités", features_lead:"Tout ce qu'il faut pour gérer vos parties Minecraft, dans une seule petite application.",
-    f1_t:"Gestion des profils", f1_p:"Chaque profil a sa version, son mod loader et son dossier. Créez-en autant que vous voulez : les bibliothèques restent partagées, donc rien n'est téléchargé deux fois.",
-    f2_t:"Mods & modpacks", f2_p:"Installez des mods, packs de ressources, datapacks et shaders depuis Modrinth et CurseForge, avec leurs dépendances. Importez un modpack en un clic : le profil est prêt à jouer.",
-    f3_t:"Éditeur de textures", f3_p:"Créez vos packs de textures directement dans le launcher, pixel par pixel, puis exportez-les en .zip. La texture modifiée dans Paint.NET est rechargée automatiquement.",
-    experimental:"Expérimental",
-    c1_t:"Toutes les versions", c1_p:"Releases, snapshots, bêtas et alphas.",
-    c2_t:"Comptes", c2_p:"Connexion Microsoft ou comptes hors-ligne, au choix.",
-    c3_t:"Ultra léger", c3_p:"Écrit en Rust, consomme très peu de RAM.",
-    c4_t:"Multilingue", c4_p:"Interface traduite, mises à jour automatiques et Discord Rich Presence.",
-    dl_title:"Je le veux !", dl_lead:"Gratuit, pour Windows 10 et 11.",
-    inst_t:"Installeur", inst_p:"Recommandé. S'installe dans votre profil sans droits administrateur, avec raccourci menu Démarrer et désinstallation propre.",
-    port_t:"Portable", port_p:"Aucune installation : extrayez l'archive et lancez <b>Misty.exe</b>. Idéal pour une clé USB.",
-    dl_setup:"Télécharger le Setup", dl_portable:"Télécharger le portable",
-    news_title:"Nouveautés", version:"Version", loading:"Chargement…", unavailable:"Notes indisponibles", latest_fallback:"dernière",
-    notes_default:"Voir les améliorations de cette version dans le launcher.",
-    footer:"Misty n'est pas affilié à Mojang Studios ni à Microsoft. Minecraft est une marque de Mojang AB.", mb:"Mo"
-  },
-  en: {
-    title:"Misty – Minecraft Launcher", locale:"en-US",
-    nav_features:"Features", nav_news:"What's new", nav_download:"Download",
-    hero_sub:"The light, fast and elegant Minecraft launcher. Every version, every mod loader: pick, click, play.",
-    latest:"Latest version:", btn_installer:"Download the installer", btn_portable:"Portable version",
-    alt_home:"Misty home screen", alt_profiles:"Misty profile list", alt_version:"Version and mod loader selection", alt_textures:"Texture pack editor",
-    features_title:"Features", features_lead:"Everything you need to manage your Minecraft games, in one small app.",
-    f1_t:"Profile management", f1_p:"Each profile has its own version, mod loader and folder. Create as many as you like: libraries are shared, so nothing is downloaded twice.",
-    f2_t:"Mods & modpacks", f2_p:"Install mods, resource packs, datapacks and shaders from Modrinth and CurseForge, with their dependencies. Import a modpack in one click: the profile is ready to play.",
-    f3_t:"Texture editor", f3_p:"Create your texture packs right in the launcher, pixel by pixel, then export them as .zip. A texture edited in Paint.NET is reloaded automatically.",
-    experimental:"Experimental",
-    c1_t:"Every version", c1_p:"Releases, snapshots, betas and alphas.",
-    c2_t:"Accounts", c2_p:"Sign in with Microsoft or use offline accounts, your choice.",
-    c3_t:"Ultra light", c3_p:"Written in Rust, uses very little RAM.",
-    c4_t:"Multilingual", c4_p:"Translated interface, automatic updates and Discord Rich Presence.",
-    dl_title:"I want it!", dl_lead:"Free, for Windows 10 and 11.",
-    inst_t:"Installer", inst_p:"Recommended. Installs in your user profile without admin rights, with a Start menu shortcut and a clean uninstall.",
-    port_t:"Portable", port_p:"No installation: extract the archive and run <b>Misty.exe</b>. Perfect for a USB drive.",
-    dl_setup:"Download the Setup", dl_portable:"Download the portable",
-    news_title:"What's new", version:"Version", loading:"Loading…", unavailable:"Notes unavailable", latest_fallback:"latest",
-    notes_default:"See the improvements in this version inside the launcher.",
-    footer:"Misty is not affiliated with Mojang Studios or Microsoft. Minecraft is a trademark of Mojang AB.", mb:"MB"
-  },
-  es: {
-    title:"Misty – Launcher de Minecraft", locale:"es-ES",
-    nav_features:"Características", nav_news:"Novedades", nav_download:"Descargar",
-    hero_sub:"El launcher de Minecraft ligero, rápido y elegante. Todas las versiones, todos los mod loaders: elige, haz clic, juega.",
-    latest:"Última versión:", btn_installer:"Descargar el instalador", btn_portable:"Versión portable",
-    alt_home:"Pantalla de inicio de Misty", alt_profiles:"Lista de perfiles de Misty", alt_version:"Selección de versión y mod loader", alt_textures:"Editor de paquetes de texturas",
-    features_title:"Características", features_lead:"Todo lo que necesitas para gestionar tus partidas de Minecraft, en una sola aplicación pequeña.",
-    f1_t:"Gestión de perfiles", f1_p:"Cada perfil tiene su versión, su mod loader y su carpeta. Crea tantos como quieras: las bibliotecas se comparten, así que nada se descarga dos veces.",
-    f2_t:"Mods y modpacks", f2_p:"Instala mods, paquetes de recursos, datapacks y shaders desde Modrinth y CurseForge, con sus dependencias. Importa un modpack con un clic: el perfil queda listo para jugar.",
-    f3_t:"Editor de texturas", f3_p:"Crea tus paquetes de texturas directamente en el launcher, píxel a píxel, y expórtalos en .zip. La textura modificada en Paint.NET se recarga automáticamente.",
-    experimental:"Experimental",
-    c1_t:"Todas las versiones", c1_p:"Releases, snapshots, betas y alphas.",
-    c2_t:"Cuentas", c2_p:"Inicio de sesión con Microsoft o cuentas sin conexión, a tu elección.",
-    c3_t:"Ultra ligero", c3_p:"Escrito en Rust, consume muy poca RAM.",
-    c4_t:"Multilingüe", c4_p:"Interfaz traducida, actualizaciones automáticas y Discord Rich Presence.",
-    dl_title:"¡Lo quiero!", dl_lead:"Gratis, para Windows 10 y 11.",
-    inst_t:"Instalador", inst_p:"Recomendado. Se instala en tu perfil sin permisos de administrador, con acceso directo en el menú Inicio y desinstalación limpia.",
-    port_t:"Portable", port_p:"Sin instalación: extrae el archivo y ejecuta <b>Misty.exe</b>. Ideal para una memoria USB.",
-    dl_setup:"Descargar el Setup", dl_portable:"Descargar el portable",
-    news_title:"Novedades", version:"Versión", loading:"Cargando…", unavailable:"Notas no disponibles", latest_fallback:"última",
-    notes_default:"Consulta las mejoras de esta versión en el launcher.",
-    footer:"Misty no está afiliado a Mojang Studios ni a Microsoft. Minecraft es una marca de Mojang AB.", mb:"MB"
-  },
-  ru: {
-    title:"Misty – лаунчер для Minecraft", locale:"ru-RU",
-    nav_features:"Возможности", nav_news:"Новости", nav_download:"Скачать",
-    hero_sub:"Лёгкий, быстрый и элегантный лаунчер для Minecraft. Все версии, все загрузчики модов: выберите, нажмите, играйте.",
-    latest:"Последняя версия:", btn_installer:"Скачать установщик", btn_portable:"Портативная версия",
-    alt_home:"Главный экран Misty", alt_profiles:"Список профилей Misty", alt_version:"Выбор версии и загрузчика модов", alt_textures:"Редактор наборов текстур",
-    features_title:"Возможности", features_lead:"Всё необходимое для управления вашими сборками Minecraft в одном небольшом приложении.",
-    f1_t:"Управление профилями", f1_p:"У каждого профиля своя версия, свой загрузчик модов и своя папка. Создавайте сколько угодно: библиотеки общие, поэтому ничего не скачивается дважды.",
-    f2_t:"Моды и модпаки", f2_p:"Устанавливайте моды, наборы ресурсов, датапаки и шейдеры из Modrinth и CurseForge вместе с зависимостями. Импортируйте модпак одним щелчком: профиль готов к игре.",
-    f3_t:"Редактор текстур", f3_p:"Создавайте наборы текстур прямо в лаунчере, пиксель за пикселем, и экспортируйте их в .zip. Текстура, изменённая в Paint.NET, перезагружается автоматически.",
-    experimental:"Экспериментально",
-    c1_t:"Все версии", c1_p:"Релизы, снапшоты, беты и альфы.",
-    c2_t:"Аккаунты", c2_p:"Вход через Microsoft или офлайн-аккаунты — на ваш выбор.",
-    c3_t:"Очень лёгкий", c3_p:"Написан на Rust, потребляет очень мало ОЗУ.",
-    c4_t:"Многоязычный", c4_p:"Переведённый интерфейс, автообновления и Discord Rich Presence.",
-    dl_title:"Хочу!", dl_lead:"Бесплатно, для Windows 10 и 11.",
-    inst_t:"Установщик", inst_p:"Рекомендуется. Устанавливается в ваш профиль без прав администратора, с ярлыком в меню «Пуск» и чистым удалением.",
-    port_t:"Портативная", port_p:"Без установки: распакуйте архив и запустите <b>Misty.exe</b>. Идеально для флешки.",
-    dl_setup:"Скачать Setup", dl_portable:"Скачать портативную версию",
-    news_title:"Новости", version:"Версия", loading:"Загрузка…", unavailable:"Заметки недоступны", latest_fallback:"последняя",
-    notes_default:"Улучшения этой версии смотрите в лаунчере.",
-    footer:"Misty не связан с Mojang Studios и Microsoft. Minecraft — товарный знак Mojang AB.", mb:"МБ"
-  },
-  it: {
-    title:"Misty – Launcher per Minecraft", locale:"it-IT",
-    nav_features:"Funzionalità", nav_news:"Novità", nav_download:"Scarica",
-    hero_sub:"Il launcher di Minecraft leggero, veloce ed elegante. Tutte le versioni, tutti i mod loader: scegli, clicca, gioca.",
-    latest:"Ultima versione:", btn_installer:"Scarica l'installer", btn_portable:"Versione portatile",
-    alt_home:"Schermata iniziale di Misty", alt_profiles:"Elenco dei profili di Misty", alt_version:"Selezione della versione e del mod loader", alt_textures:"Editor dei pacchetti di texture",
-    features_title:"Funzionalità", features_lead:"Tutto ciò che serve per gestire le tue partite a Minecraft, in una sola piccola applicazione.",
-    f1_t:"Gestione dei profili", f1_p:"Ogni profilo ha la sua versione, il suo mod loader e la sua cartella. Creane quanti vuoi: le librerie sono condivise, quindi nulla viene scaricato due volte.",
-    f2_t:"Mod e modpack", f2_p:"Installa mod, resource pack, datapack e shader da Modrinth e CurseForge, con le loro dipendenze. Importa un modpack con un clic: il profilo è pronto per giocare.",
-    f3_t:"Editor di texture", f3_p:"Crea i tuoi pacchetti di texture direttamente nel launcher, pixel per pixel, ed esportali in .zip. La texture modificata in Paint.NET viene ricaricata automaticamente.",
-    experimental:"Sperimentale",
-    c1_t:"Tutte le versioni", c1_p:"Release, snapshot, beta e alpha.",
-    c2_t:"Account", c2_p:"Accesso con Microsoft o account offline, a tua scelta.",
-    c3_t:"Ultraleggero", c3_p:"Scritto in Rust, consuma pochissima RAM.",
-    c4_t:"Multilingua", c4_p:"Interfaccia tradotta, aggiornamenti automatici e Discord Rich Presence.",
-    dl_title:"Lo voglio!", dl_lead:"Gratuito, per Windows 10 e 11.",
-    inst_t:"Installer", inst_p:"Consigliato. Si installa nel tuo profilo senza diritti di amministratore, con collegamento nel menu Start e disinstallazione pulita.",
-    port_t:"Portatile", port_p:"Nessuna installazione: estrai l'archivio e avvia <b>Misty.exe</b>. Ideale per una chiavetta USB.",
-    dl_setup:"Scarica il Setup", dl_portable:"Scarica la versione portatile",
-    news_title:"Novità", version:"Versione", loading:"Caricamento…", unavailable:"Note non disponibili", latest_fallback:"ultima",
-    notes_default:"Scopri i miglioramenti di questa versione nel launcher.",
-    footer:"Misty non è affiliato a Mojang Studios né a Microsoft. Minecraft è un marchio di Mojang AB.", mb:"MB"
-  }
-};
-
-const LANGS = Object.keys(T);
-let lang = "fr", rel = null, failed = false;
-
-function detect() {
-  try { const s = localStorage.getItem("misty-lang"); if (LANGS.includes(s)) return s; } catch (e) {}
-  const n = (navigator.language || "en").slice(0, 2).toLowerCase();
-  return LANGS.includes(n) ? n : "en";
-}
-
-const fmtSize = b => b ? (b / 1048576).toFixed(1).replace(".", T[lang].locale === "en-US" ? "." : ",") + " " + T[lang].mb : "";
-
-function renderDynamic() {
-  const t = T[lang], $ = id => document.getElementById(id);
-  if (rel) {
-    const date = new Date(rel.date).toLocaleDateString(t.locale, {day:"numeric", month:"long", year:"numeric"});
-    $("ver").textContent = rel.version;
-    $("size-setup").textContent = `v${rel.version} · ${fmtSize(rel.setupSize)} · Windows 10/11`;
-    $("size-portable").textContent = `v${rel.version} · ${fmtSize(rel.portableSize)} · .zip`;
-    $("meta-setup").textContent = `${t.version} ${rel.version} · ${fmtSize(rel.setupSize)}`;
-    $("meta-portable").textContent = `${t.version} ${rel.version} · ${fmtSize(rel.portableSize)}`;
-    $("log-title").textContent = `${t.version} ${rel.version} · ${date}`;
-    $("log-body").textContent = (rel.notes || "").trim() || t.notes_default;
-  } else if (failed) {
-    $("ver").textContent = t.latest_fallback;
-    $("log-title").textContent = t.unavailable;
-  } else {
-    $("log-title").textContent = t.loading;
-  }
-}
-
-function setLang(l) {
-  lang = l;
-  const t = T[l];
-  document.documentElement.lang = l;
-  document.title = t.title;
-  document.querySelectorAll("[data-i18n]").forEach(el => { el.innerHTML = t[el.dataset.i18n]; });
-  const dir = l === "fr" ? "fr" : "en"; // l'application n'existe qu'en FR/EN : ES/RU/IT utilisent les captures anglaises
-  document.querySelectorAll("[data-shot]").forEach(el => {
-    const src = `/assets/screens/${dir}/${el.dataset.shot}.png`;
-    if (el.getAttribute("src") !== src) el.src = src;
-  });
-  document.querySelectorAll("[data-i18n-alt]").forEach(el => { el.alt = t[el.dataset.i18nAlt]; });
-  document.querySelectorAll(".lang button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === l)));
-  try { localStorage.setItem("misty-lang", l); } catch (e) {}
-  renderDynamic();
-}
-
-document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click", () => setLang(b.dataset.lang)));
-setLang(detect());
-
-fetch("/api/latest").then(r => r.json()).then(d => {
-  if (d.error) throw 0;
-  rel = d; renderDynamic();
-}).catch(() => { failed = true; renderDynamic(); });
-</script>
 </body>
 </html>
