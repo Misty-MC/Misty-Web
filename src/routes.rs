@@ -47,6 +47,7 @@ fn page<'a>(state: &'a AppState, lang: Lang, path: &'a str, count: Option<usize>
         path,
         release_count: count,
         repo: state.github.repo(),
+        fog: &state.fog_strip,
     }
 }
 

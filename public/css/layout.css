@@ -37,7 +37,7 @@
 .langdd .menu a[aria-current]{background:var(--accent-strong);color:#fff}
 
 /* ---------- Pied de page ---------- */
-.foot{position:relative;overflow:hidden;border-top:1px solid var(--line);background:linear-gradient(180deg,var(--bg),#070b16);margin-top:clamp(40px,6vw,80px)}
+.foot{position:relative;overflow:hidden;border-top:1px solid var(--line);background:linear-gradient(180deg,rgba(10,15,29,.55),rgba(7,11,22,.92));margin-top:clamp(10px,2vw,30px)}
 .ftop{display:flex;justify-content:space-between;align-items:flex-start;gap:24px 48px;flex-wrap:wrap;padding:clamp(48px,6vw,72px) 0 40px}
 .ftop .tag{color:var(--muted);font-size:14.5px;margin-top:10px;max-width:300px}
 .disclaimer{max-width:360px;text-align:right;font-size:13.5px;color:var(--muted)}
