@@ -21,6 +21,7 @@ pub fn render(p: &Page, latest: Option<&Release>, scene: &str) -> Markup {
     let main = html! {
         (hero(p, latest, scene))
         (preview(p))
+        (layout::fog_divider(p))
 
         section.sec #features {
             div.wrap {
@@ -188,6 +189,7 @@ fn download(p: &Page, latest: Option<&Release>) -> Markup {
         Some(format!("{} · {}", r.tag_name, format::size(tr, a.size)))
     };
     html! {
+        (layout::fog_divider(p))
         section.sec #download {
             div.wrap {
                 div.head.reveal {

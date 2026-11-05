@@ -73,6 +73,30 @@ button{font:inherit;color:inherit}
 @keyframes twinkle{from{opacity:.25}to{opacity:1}}
 @keyframes drift{from{transform:translateX(-90px)}to{transform:translateX(90px)}}
 
+/* Lune qui flotte et halo qui respire */
+.scene .moon{animation:moon-float 9s ease-in-out infinite}
+.scene .moon-glow{transform-box:fill-box;transform-origin:center;animation:moon-glow 6s ease-in-out infinite alternate}
+@keyframes moon-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes moon-glow{from{opacity:.6;transform:scale(.9)}to{opacity:1;transform:scale(1.1)}}
+
+/* Nappes de brume pixel qui traversent les paysages et les bandes de brume */
+.puff{animation:puff 100s linear infinite}
+@keyframes puff{from{transform:translateX(-2000px)}to{transform:translateX(2000px)}}
+.fog-divider{position:relative;z-index:1;height:clamp(100px,13vw,170px);margin:clamp(-70px,-5vw,-30px) 0;pointer-events:none;
+  -webkit-mask-image:linear-gradient(180deg,transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(180deg,transparent,#000 30%,#000 70%,transparent)}
+.fogstrip{width:100%;height:100%}
+
+/* Voile de brume qui dérive derrière tout le site */
+main,.foot{position:relative;z-index:1}
+.mist{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.mist div{position:absolute;border-radius:50%;background:radial-gradient(closest-side,rgba(170,198,255,.13),rgba(170,198,255,0));will-change:transform}
+.mist .m1{width:95vw;height:60vh;left:-25vw;top:5vh;animation:mist1 70s ease-in-out infinite alternate}
+.mist .m2{width:85vw;height:55vh;right:-30vw;top:40vh;animation:mist2 95s ease-in-out infinite alternate}
+.mist .m3{width:130vw;height:40vh;left:-15vw;bottom:-15vh;animation:mist3 120s ease-in-out infinite alternate;background:radial-gradient(closest-side,rgba(170,198,255,.1),rgba(170,198,255,0))}
+@keyframes mist1{to{transform:translate3d(35vw,10vh,0) scale(1.15)}}
+@keyframes mist2{to{transform:translate3d(-40vw,-15vh,0) scale(.9)}}
+@keyframes mist3{to{transform:translate3d(20vw,-8vh,0) scale(1.1)}}
+
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
   html{scroll-behavior:auto}

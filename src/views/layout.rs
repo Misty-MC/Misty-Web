@@ -14,6 +14,8 @@ pub struct Page<'a> {
     pub release_count: Option<usize>,
     /// `owner/repo` du launcher sur GitHub.
     pub repo: &'a str,
+    /// Bande de brume animée (SVG), réutilisée entre les sections.
+    pub fog: &'a str,
 }
 
 impl Page<'_> {
@@ -52,12 +54,20 @@ pub fn render(p: &Page, head: Head, main: Markup) -> Markup {
                 script src="/js/site.js" defer {}
             }
             body class=(head.body_class) {
+                // Voile de brume qui dérive derrière tout le site.
+                div.mist aria-hidden="true" { div.m1 {} div.m2 {} div.m3 {} }
                 (nav(p))
                 main #main { (main) }
+                (fog_divider(p))
                 (footer(p))
             }
         }
     }
+}
+
+/// Bande de brume pixel qui dérive, posée entre deux sections.
+pub fn fog_divider(p: &Page) -> Markup {
+    html! { div.fog-divider aria-hidden="true" { (PreEscaped(p.fog)) } }
 }
 
 fn nav(p: &Page) -> Markup {

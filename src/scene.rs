@@ -77,6 +77,54 @@ fn rect(d: &mut String, x: i32, y: i32, w: i32, h: i32) {
     let _ = write!(d, "M{x} {y}h{w}v{h}h-{w}z");
 }
 
+/// Une nappe de brume en pixels : quelques rangées empilées qui rétrécissent vers le haut.
+fn puff_path(rng: &mut Rng) -> String {
+    let mut d = String::new();
+    let rows = rng.range(3, 6);
+    let base = rng.range(16, 44);
+    let (mut left, mut right) = (0, base);
+    for r in 0..rows {
+        rect(&mut d, left * P, (rows - 1 - r) * P, (right - left) * P, P);
+        left += rng.range(1, 5);
+        right -= rng.range(1, 5);
+        if right - left < 4 {
+            break;
+        }
+    }
+    d
+}
+
+/// Ajoute `n` nappes de brume qui dérivent de gauche à droite, entre les lignes `rows`.
+/// Chaque nappe a sa vitesse et son décalage, pour que le mouvement ne se répète pas.
+fn puffs(svg: &mut String, rng: &mut Rng, n: i32, rows: (i32, i32), opacity: f32) {
+    for _ in 0..n {
+        let y = rng.range(rows.0, rows.1) * P;
+        // Position de repos (visible si les animations sont coupées). L'animation la décale de
+        // -2000 à +2000 : quelle que soit cette position, la nappe entre et sort hors champ.
+        let x = rng.range(0, W / P) * P;
+        let dur = rng.range(150, 320);
+        let delay = rng.range(0, dur);
+        let op = opacity * (0.7 + rng.float() * 0.6);
+        let _ = write!(
+            svg,
+            r##"<g transform="translate({x} {y})"><path class="puff" style="animation-duration:{dur}s;animation-delay:-{delay}s" d="{}" fill="#d6e4ff" opacity="{op:.3}"/></g>"##,
+            puff_path(rng)
+        );
+    }
+}
+
+/// Bande de brume seule (sans paysage), posée entre les sections et au-dessus du pied de page.
+pub fn fog_strip(seed: u64) -> String {
+    const SH: i32 = 160;
+    let mut rng = Rng(seed | 1);
+    let mut svg = format!(
+        r##"<svg class="fogstrip" viewBox="0 0 {W} {SH}" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges" aria-hidden="true" focusable="false">"##
+    );
+    puffs(&mut svg, &mut rng, 16, (2, SH / P - 6), 0.1);
+    svg.push_str("</svg>");
+    svg
+}
+
 pub fn render(opt: &SceneOptions) -> String {
     let mut rng = Rng(opt.seed | 1);
     let mut svg = String::with_capacity(32 * 1024);
@@ -117,7 +165,7 @@ pub fn render(opt: &SceneOptions) -> String {
     let (mx, my, r) = ((opt.moon_x * W as f32) as i32 / P * P, 13 * P, opt.moon_r);
     let _ = write!(
         svg,
-        r##"<circle cx="{mx}" cy="{my}" r="{}" fill="url(#glow)"/>"##,
+        r##"<g class="moon-glow"><circle cx="{mx}" cy="{my}" r="{}" fill="url(#glow)"/></g>"##,
         r * 5
     );
     let (mut moon, mut craters) = (String::new(), String::new());
@@ -138,7 +186,7 @@ pub fn render(opt: &SceneOptions) -> String {
     }
     let _ = write!(
         svg,
-        r##"<path d="{moon}" fill="#eaf1ff"/><path d="{craters}" fill="#c4d4f2"/>"##
+        r##"<g class="moon"><path d="{moon}" fill="#eaf1ff"/><path d="{craters}" fill="#c4d4f2"/></g>"##
     );
 
     // Crêtes de l'arrière vers l'avant, séparées par des bancs de brume qui dérivent.
@@ -178,6 +226,16 @@ pub fn render(opt: &SceneOptions) -> String {
             let _ = write!(svg, r##"<path d="{trees}" fill="{color}"/>"##);
         }
 
+        // Nappes de brume qui traversent la scène, de plus en plus visibles vers l'avant.
+        let row = *base as i32;
+        puffs(
+            &mut svg,
+            &mut rng,
+            3 + i as i32,
+            (row - 6, row + 2),
+            0.05 + 0.025 * i as f32,
+        );
+
         if i < 3 {
             let y = ((base + 2.0) as i32 - 2) * P;
             let _ = write!(
@@ -212,5 +270,9 @@ mod tests {
         let a = render(&opt);
         assert_eq!(a, render(&opt));
         assert!(a.starts_with("<svg") && a.ends_with("</svg>"));
+        assert!(a.contains(r#"class="moon""#) && a.contains(r#"class="puff""#));
+        let f = fog_strip(3);
+        assert_eq!(f, fog_strip(3));
+        assert!(f.starts_with("<svg") && f.ends_with("</svg>") && f.contains("puff"));
     }
 }

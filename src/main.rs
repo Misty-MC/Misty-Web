@@ -27,6 +27,8 @@ pub struct AppState {
     pub github: github::GitHub,
     pub scene_home: String,
     pub scene_notes: String,
+    /// Bande de brume pixel, insérée entre les sections.
+    pub fog_strip: String,
 }
 
 fn env_or(key: &str, default: &str) -> String {
@@ -51,6 +53,7 @@ async fn main() {
             moon_x: 0.78,
             moon_r: 40,
         }),
+        fog_strip: scene::fog_strip(11),
         scene_notes: scene::render(&scene::SceneOptions {
             seed: 21,
             moon_x: 0.7,
