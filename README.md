@@ -1,48 +1,75 @@
 # Site Misty
 
+Site du launcher Misty, entièrement servi par un serveur **Rust** ([axum](https://github.com/tokio-rs/axum)).
+Les pages sont générées côté serveur avec [maud](https://maud.lambda.xyz/) : traductions, notes de version,
+paysage en pixel art… Le seul JavaScript (`public/js/site.js`) ajoute le défilement fluide et quelques
+animations. Sans lui, le site reste entièrement utilisable.
+
+## Pages et routes
+
+| Route | Rôle |
+|---|---|
+| `/` | Page d'accueil |
+| `/patch-notes` | Toutes les versions et leurs notes (`?filter=stable` ou `?filter=pre`, ancre `#<tag>` pour ouvrir une version) |
+| `/download/setup`, `/download/portable` | Dernier `Misty-Setup-<v>.exe` / `Misty-<v>.zip`, relayé depuis GitHub |
+| `/api/latest` | Version, date, notes et tailles de la dernière version (JSON) |
+| `?lang=fr\|en\|es\|ru\|it` | Change la langue, mémorisée dans un cookie. Sinon : cookie, puis langue du navigateur |
+
+Les releases GitHub sont gardées en cache 2 minutes : une nouvelle release apparaît automatiquement.
+Les fichiers doivent garder les noms `Misty-Setup-<v>.exe` et `Misty-<v>.zip`.
+
 ## Organisation
 
 ```
-public/                     le site statique (servi tel quel)
-├── index.html              structure de la page (aucun style ni script en ligne)
-├── css/
-│   ├── base.css            polices, variables de couleur, reset, boutons, utilitaires
-│   ├── layout.css          en-tête / navigation et pied de page
-│   ├── sections.css        sections de l'accueil (hero, vitrine, étapes, téléchargement, FAQ…)
-│   └── responsive.css      animations, mouvement réduit et points de rupture (chargé en dernier)
-├── js/
-│   ├── main.js             point d'entrée (module ES)
-│   ├── lang.js             détection et changement de langue, menu déroulant
-│   ├── release.js          dernière release : version, tailles, notes (via /api/latest)
-│   ├── markdown.js         mini-rendu sécurisé des notes de release
-│   ├── smooth-scroll.js    défilement fluide (molette et liens d'ancre)
-│   ├── ui.js               nav au défilement, capture inclinée, bandeau, onglets, apparitions
-│   ├── dom.js              raccourcis DOM partagés
-│   └── i18n/               une langue par fichier (fr, en, es, ru, it) + index.js
-└── assets/                 icône, polices Silkscreen, captures d'écran FR/EN
-
-functions/                  Cloudflare Pages Functions
-├── api/latest.js           version, taille et notes de la dernière release
-└── download/[type].js      /download/setup et /download/portable — renvoient le dernier asset depuis ton domaine
-
-server.js                   serveur Node sans dépendance (alternative à Cloudflare, ex. Coolify)
+src/
+├── main.rs            démarrage, routes, fichiers statiques
+├── routes.rs          pages, /api/latest, /download/*
+├── github.rs          releases GitHub + cache
+├── i18n.rs            langues : choix et chargement des traductions
+├── markdown.rs        notes de version Markdown → HTML sûr
+├── format.rs          dates et tailles selon la langue
+├── scene.rs           paysage pixel art (SVG généré au démarrage)
+└── views/             pages HTML (maud)
+    ├── layout.rs      <head>, navigation, pied de page
+    ├── home.rs        accueil
+    ├── patch_notes.rs patch notes
+    ├── not_found.rs   404
+    └── icons.rs       icônes SVG
+locales/               une langue par fichier TOML (fr, en, es, ru, it)
+public/
+├── css/               base, layout, home, patch-notes
+├── js/site.js         défilement fluide, nav, animations
+└── assets/            icône, polices Silkscreen, captures FR/EN
+Dockerfile             image de production
 ```
 
 ### Ajouter une langue
-1. Copier `public/js/i18n/en.js` vers `public/js/i18n/<code>.js` et traduire les valeurs.
-2. L'importer dans `public/js/i18n/index.js`.
-3. Ajouter un bouton `data-lang="<code>"` dans le menu de la nav et dans le footer (`index.html`).
+1. Copier `locales/en.toml` vers `locales/<code>.toml` et traduire les valeurs.
+2. Ajouter la langue dans `src/i18n.rs` (enum `Lang`, `Lang::ALL`, `code()` et `TRANSLATIONS`).
+3. `cargo test` vérifie qu'aucune clé ne manque.
 
 ## Lancer en local
+
 ```
-npm start        # http://localhost:3000
+cargo run
 ```
 
-## Déploiement (Cloudflare Pages, gratuit)
-1. Pousse ce dossier sur un dépôt GitHub (ex. `Misty-site`).
-2. Cloudflare Dashboard → Workers & Pages → Create → Pages → Connect to Git.
-3. Build command : vide. Output directory : `public`.
-4. (Optionnel) Variable `GITHUB_TOKEN` (token sans permission) pour éviter la limite de l'API GitHub.
+Le site est alors sur http://localhost:3000. Pour les tests : `cargo test`.
 
-Chaque nouvelle release GitHub est prise en compte automatiquement (cache ~2 min).
-Les assets doivent garder les noms `Misty-Setup-<v>.exe` et `Misty-<v>.zip`.
+## Variables d'environnement
+
+| Variable | Défaut | Rôle |
+|---|---|---|
+| `PORT` | `3000` | Port d'écoute |
+| `GITHUB_TOKEN` | – | Token GitHub sans permission, pour éviter la limite de l'API (recommandé) |
+| `MISTY_REPO` | `xTheoxreborn/Misty` | Dépôt dont on affiche les releases |
+| `MISTY_PUBLIC_DIR` | `public` | Dossier des fichiers statiques |
+| `GITHUB_API` | `https://api.github.com` | Pour tester avec une fausse API |
+
+## Déploiement (Coolify ou tout hébergeur Docker)
+
+1. Créer une ressource à partir de ce dépôt avec le **Build Pack : Dockerfile**.
+2. Port exposé : `3000`.
+3. (Optionnel) Ajouter la variable `GITHUB_TOKEN`.
+
+Cloudflare Pages ne peut pas faire tourner ce serveur Rust : l'ancienne version (fonctions JavaScript) a été retirée.
