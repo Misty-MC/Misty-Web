@@ -1,67 +1,80 @@
-/* Base : polices, variables, reset, utilitaires */
+/* Base : polices, couleurs, reset, boutons et utilitaires partagés par toutes les pages. */
 @font-face{font-family:Silkscreen;src:url(/assets/Silkscreen-Regular.ttf);font-weight:400;font-display:swap}
 @font-face{font-family:Silkscreen;src:url(/assets/Silkscreen-Bold.ttf);font-weight:700;font-display:swap}
+
 :root{
-  --navy:#1c2335;--navy-2:#273250;--navy-3:#323f60;--ink:#1c2335;--muted:#4a5874;
-  --mist:#eef4fc;--sky:#bad6f7;--sky-2:#95b9e4;--steel:#5b7fb0;
-  --green:#25d46c;--green-d:#139a4c;--blue:#2f80ed;
-  --glass:rgba(255,255,255,.5);--glass-strong:rgba(255,255,255,.78);--edge:rgba(255,255,255,.7);
-  --shadow:0 12px 40px rgba(28,35,53,.18);--shadow-lg:0 40px 90px -20px rgba(28,35,53,.45);
-  --r:22px;
+  --bg:#0a0f1d;--bg-2:#0e1527;--panel:#111a30;--panel-2:#162140;
+  --line:rgba(255,255,255,.08);--line-2:rgba(255,255,255,.15);
+  --text:#eef3ff;--muted:#a3b0cb;--dim:#6f7c99;
+  --accent:#9cc0ff;--accent-2:#cfe0ff;--accent-strong:#6f9cff;
+  --green:#25d46c;--green-d:#139a4c;
+  --r:16px;
+  --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --pix:Silkscreen,ui-monospace,monospace;
+  color-scheme:dark;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:#5b7fb0 #e2ecf8;scroll-padding-top:96px}
-body{
-  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);min-height:100vh;
-  background:var(--mist);overflow-x:hidden;line-height:1.6;-webkit-font-smoothing:antialiased;
-}
-img{max-width:100%}
-a{color:inherit}
-::selection{background:rgba(28,35,53,.72);color:#fff;text-shadow:none}
+html{scroll-behavior:smooth;scroll-padding-top:84px;scrollbar-width:thin;scrollbar-color:#3c5486 var(--bg)}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+img,svg{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+ul,ol{list-style:none}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
 
-/* Scrollbar : piste brume, curseur bleu acier en relief façon bloc */
+/* Sélection légèrement transparente */
+::selection{background:rgba(156,192,255,.32);color:#fff}
+
+/* Scrollbar : piste nuit, curseur bleu brume en relief */
 ::-webkit-scrollbar{width:12px;height:12px}
-::-webkit-scrollbar-track{background:#e2ecf8;border-left:1px solid #d3e1f2}
+::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{
-  background:linear-gradient(90deg,#7a9cc9,#5b7fb0 55%,#4a6c9c);border-radius:4px;
-  border:2px solid #e2ecf8;box-shadow:inset 0 1px 0 #ffffff59,inset 0 -2px 0 #00000026;
+  background:linear-gradient(90deg,#4b6599,#3c5486);border-radius:4px;border:2px solid var(--bg);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 -2px 0 rgba(0,0,0,.25);
 }
-::-webkit-scrollbar-thumb:hover{background:linear-gradient(90deg,#5b7fb0,#2f4a75)}
-::-webkit-scrollbar-thumb:active{background:var(--navy)}
-::-webkit-scrollbar-corner{background:#e2ecf8}
+::-webkit-scrollbar-thumb:hover{background:linear-gradient(90deg,#6f9cff,#4b6fc0)}
+::-webkit-scrollbar-corner{background:var(--bg)}
 
-.wrap{max-width:1200px;margin:0 auto;padding:0 clamp(16px,4vw,48px)}
-.pix{font-family:Silkscreen,monospace;letter-spacing:.02em}
-.glass{
-  background:var(--glass);border:1px solid var(--edge);border-radius:var(--r);
-  backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);box-shadow:var(--shadow);
-}
-.eyebrow{
-  display:inline-flex;align-items:center;gap:10px;font-family:Silkscreen,monospace;font-size:11px;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--navy);padding:7px 14px;border-radius:10px;background:#ffffffa6;border:1px solid var(--edge);
-}
-.dot{width:8px;height:8px;border-radius:2px;background:var(--green);box-shadow:0 0 0 3px #25d46c33,0 0 10px var(--green);flex:none}
-:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:6px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 clamp(16px,4vw,40px)}
+.ic{width:18px;height:18px;flex:none}
 
-/* ---------- Boutons ---------- */
+/* Petite étiquette pixel au-dessus des titres */
+.label{display:inline-block;font-family:var(--pix);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.small{font-family:var(--pix);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.muted{color:var(--muted)}
+.accent{background:linear-gradient(90deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.pill{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;background:var(--panel);border:1px solid var(--line)}
+.sw{width:9px;height:9px;border-radius:2px;background:var(--c)}
+
+/* Boutons en relief (façon bouton « Jouer » du launcher) */
 .btn{
-  display:inline-flex;align-items:center;gap:12px;text-decoration:none;font-weight:700;font-size:16px;line-height:1.25;
-  padding:15px 26px;border-radius:14px;cursor:pointer;border:0;position:relative;
-  transition:transform .15s,box-shadow .15s,background .15s,filter .15s;
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;font-weight:650;font-size:15px;line-height:1.2;
+  padding:13px 20px;border-radius:12px;border:1px solid transparent;cursor:pointer;white-space:nowrap;
+  transition:transform .12s,box-shadow .12s,background .15s,border-color .15s;
 }
-.btn small{display:block;font-weight:500;font-size:12px;opacity:.8}
-.btn svg{width:22px;height:22px;flex:none}
-.btn.play{
-  background:linear-gradient(180deg,#3ee584,var(--green));color:#0b2a17;
-  box-shadow:0 5px 0 var(--green-d),0 14px 30px -6px #25d46c88;
+.btn.play{background:linear-gradient(180deg,#3ee584,var(--green));color:#062614;box-shadow:0 4px 0 var(--green-d),0 12px 28px -10px rgba(37,212,108,.6)}
+.btn.play:hover{transform:translateY(-2px);box-shadow:0 6px 0 var(--green-d),0 16px 32px -10px rgba(37,212,108,.7)}
+.btn.play:active{transform:translateY(3px);box-shadow:0 1px 0 var(--green-d)}
+.btn.ghost{background:var(--panel);border-color:var(--line-2);color:var(--text);box-shadow:0 4px 0 #070b16}
+.btn.ghost:hover{transform:translateY(-2px);background:var(--panel-2);box-shadow:0 6px 0 #070b16}
+.btn.ghost:active{transform:translateY(3px);box-shadow:0 1px 0 #070b16}
+.btn.sm{padding:8px 14px;font-size:14px;border-radius:10px}
+.btn.sm .ic{width:16px;height:16px}
+
+/* Apparition au défilement (activée par site.js) */
+.js .reveal{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s ease}
+.js .reveal.in{opacity:1;transform:none}
+
+/* Paysage pixel art */
+.scene .twinkle{animation:twinkle 4s ease-in-out infinite alternate}
+.scene .fog{animation:drift 28s ease-in-out infinite alternate}
+.scene .fog1{animation-duration:36s;animation-delay:-8s}
+.scene .fog2{animation-duration:22s;animation-delay:-4s}
+@keyframes twinkle{from{opacity:.25}to{opacity:1}}
+@keyframes drift{from{transform:translateX(-90px)}to{transform:translateX(90px)}}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  html{scroll-behavior:auto}
+  .js .reveal{opacity:1;transform:none}
 }
-.btn.play:hover{transform:translateY(-2px);box-shadow:0 7px 0 var(--green-d),0 20px 36px -6px #25d46c99;filter:brightness(1.04)}
-.btn.play:active{transform:translateY(4px);box-shadow:0 1px 0 var(--green-d),0 8px 18px -6px #25d46c88}
-.btn.dark{background:var(--navy);color:#fff;box-shadow:0 5px 0 #0d1220,0 14px 30px -8px #1c233588}
-.btn.dark:hover{transform:translateY(-2px);box-shadow:0 7px 0 #0d1220,0 18px 34px -8px #1c233599}
-.btn.dark:active{transform:translateY(4px);box-shadow:0 1px 0 #0d1220}
-.btn.ghost{background:var(--glass-strong);color:var(--navy);border:1px solid var(--edge);box-shadow:0 5px 0 #c3d4ea}
-.btn.ghost:hover{transform:translateY(-2px);background:#fff;box-shadow:0 7px 0 #c3d4ea}
-.btn.ghost:active{transform:translateY(4px);box-shadow:0 1px 0 #c3d4ea}
-.btn.sm{padding:10px 18px;font-size:14px;border-radius:12px}
-.btn.sm svg{width:18px;height:18px}

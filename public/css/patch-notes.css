@@ -1,0 +1,84 @@
+/* Page des patch notes et page 404 (chargée après home.css, dont elle réutilise le hero). */
+
+.pn-hero{padding-bottom:clamp(200px,26vw,360px)}
+.pn-hero .sky{background:
+  radial-gradient(700px 420px at 70% 70%,rgba(111,156,255,.28),transparent 70%),
+  linear-gradient(180deg,#0b1224 0%,#111d3d 60%,#152448 80%,var(--bg) 100%)}
+.pn-copy{max-width:720px}
+.pn-copy .tags a:hover{color:var(--text)}
+
+/* Barre de filtres */
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips a{
+  display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--muted);
+  padding:7px 12px;border-radius:10px;background:var(--panel);border:1px solid var(--line);box-shadow:0 3px 0 #060a14;transition:.15s;
+}
+.chips a span{font-size:12px;color:var(--dim)}
+.chips a:hover{color:var(--text);border-color:var(--line-2)}
+.chips a[aria-current]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.chips a[aria-current] span{color:#4b5878}
+
+/* Liste des versions */
+.rels{border-top:1px solid var(--line)}
+.rel{border-bottom:1px solid var(--line)}
+.rel summary{
+  list-style:none;cursor:pointer;display:grid;grid-template-columns:10px auto minmax(0,1fr) 20px;align-items:center;gap:14px;
+  padding:18px 6px;transition:background .15s;
+}
+.rel summary::-webkit-details-marker{display:none}
+.rel summary:hover{background:rgba(255,255,255,.025)}
+.rel summary>.ic{color:var(--dim);transition:transform .25s}
+.rel[open] summary>.ic{transform:rotate(180deg);color:var(--accent)}
+.dot{width:8px;height:8px;border-radius:2px;background:var(--dim)}
+.dot.on{background:var(--green);box-shadow:0 0 0 3px rgba(37,212,108,.18),0 0 10px var(--green)}
+.badge{font-family:var(--pix);font-size:9.5px;letter-spacing:.04em;padding:4px 8px;border-radius:6px;background:var(--panel-2);border:1px solid var(--line-2);color:var(--muted);white-space:nowrap}
+.badge.latest{background:rgba(37,212,108,.14);border-color:rgba(37,212,108,.4);color:#7ff0ad}
+.badge.pre{background:rgba(255,190,90,.1);border-color:rgba(255,190,90,.35);color:#ffcf85}
+.rt{display:flex;flex-direction:column;min-width:0}
+.rt strong{font-size:16.5px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rm{font-size:13px;color:var(--dim)}
+.rm code{font:12px ui-monospace,Consolas,monospace}
+.rb{padding:2px 6px 30px 48px}
+
+/* Notes au format Markdown */
+.md{color:var(--muted);font-size:15.5px;max-width:680px}
+.md>*+*{margin-top:12px}
+.md h3,.md h4,.md h5,.md h6{color:var(--text);font-size:15px;font-weight:650;margin-top:22px}
+.md h3:first-child,.md h4:first-child,.md h5:first-child{margin-top:0}
+.md ul,.md ol{padding-left:20px;list-style:disc}
+.md ol{list-style:decimal}
+.md li+li{margin-top:5px}
+.md li::marker{color:var(--accent-strong)}
+.md a{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.md strong{color:var(--text)}
+.md code{font:13px ui-monospace,Consolas,monospace;background:var(--panel-2);padding:2px 6px;border-radius:6px;color:var(--accent-2)}
+.md pre{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;overflow:auto}
+.md pre code{background:none;padding:0}
+.md blockquote{border-left:3px solid var(--accent-strong);padding-left:14px}
+.md img{border-radius:10px;border:1px solid var(--line)}
+.md table{border-collapse:collapse}
+.md th,.md td{border:1px solid var(--line);padding:6px 10px}
+
+.files{display:flex;flex-direction:column;gap:8px;margin:24px 0 18px;max-width:560px}
+.files .small{margin-bottom:2px}
+.file{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;background:var(--panel);border:1px solid var(--line);font-size:14px;transition:border-color .15s,background .15s}
+.file:hover{border-color:var(--line-2);background:var(--panel-2)}
+.file .ic{color:var(--accent)}
+.file span:not(.sz){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file .sz{font-size:12.5px;color:var(--dim)}
+.rb .link{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--accent)}
+.rb .link .ic{width:14px;height:14px}
+.empty{padding:28px;border-radius:var(--r);background:var(--panel);border:1px solid var(--line);color:var(--muted)}
+
+/* 404 */
+.nf .code{font-family:var(--pix);font-size:clamp(64px,10vw,120px);line-height:1;color:var(--accent)}
+
+@media (max-width:600px){
+  .rel summary{grid-template-columns:8px minmax(0,1fr) 18px;gap:10px}
+  .rel summary .badge{grid-column:2;justify-self:start}
+  .rel summary .rt{grid-column:2}
+  .rel summary>.ic{grid-column:3;grid-row:1/span 2}
+  .rel summary .dot{grid-row:1/span 2}
+  .rb{padding-left:6px}
+}
