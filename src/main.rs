@@ -3,7 +3,7 @@
 //! Variables d'environnement :
 //! - `PORT` (3000 par défaut)
 //! - `GITHUB_TOKEN` (facultatif) : évite la limite de l'API GitHub
-//! - `MISTY_REPO` (`xTheoxreborn/Misty` par défaut) : dépôt dont on affiche les releases
+//! - `MISTY_REPO` (`Misty-MC/Misty` par défaut) : dépôt dont on affiche les releases
 //! - `MISTY_PUBLIC_DIR` (`public` par défaut) : fichiers statiques (CSS, JS, images, polices)
 //! - `GITHUB_API` (`https://api.github.com` par défaut) : utile pour tester avec une fausse API
 
@@ -45,7 +45,7 @@ async fn main() {
     let state = Arc::new(AppState {
         github: github::GitHub::new(
             env_or("GITHUB_API", "https://api.github.com"),
-            env_or("MISTY_REPO", "xTheoxreborn/Misty"),
+            env_or("MISTY_REPO", "Misty-MC/Misty"),
             std::env::var("GITHUB_TOKEN").ok().filter(|t| !t.is_empty()),
         ),
         scene_home: scene::render(&scene::SceneOptions {

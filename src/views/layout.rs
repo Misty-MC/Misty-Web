@@ -76,7 +76,7 @@ fn nav(p: &Page) -> Markup {
     html! {
         header.nav #top {
             div.wrap.nav-in {
-                a.brand href="/" { img src="/assets/icone.png" alt="" width="26" height="30"; span { "Misty" } }
+                a.brand href="/" { img src="/assets/icone.png" alt="" width="30" height="30"; span { "Misty" } }
                 nav.links aria-label="Navigation" {
                     a href="/#features" { (tr.nav_features) }
                     a href="/#loaders" { (tr.nav_loaders) }
@@ -119,7 +119,7 @@ fn footer(p: &Page) -> Markup {
             div.wrap {
                 div.ftop {
                     div {
-                        a.brand href="/" { img src="/assets/icone.png" alt="" width="26" height="30"; span { "Misty" } }
+                        a.brand href="/" { img src="/assets/icone.png" alt="" width="30" height="30"; span { "Misty" } }
                         p.tag { (tr.ft_tag) }
                     }
                     p.disclaimer { (tr.ft_disclaimer) }
