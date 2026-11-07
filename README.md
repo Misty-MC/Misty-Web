@@ -15,7 +15,7 @@ Rendered server-side in Rust: pages, translations, patch notes and the pixel-art
 [![Docker](https://img.shields.io/badge/deploy-Docker-2496ED?style=flat-square&logo=docker&logoColor=white)](Dockerfile)
 [![License](https://img.shields.io/badge/license-MIT-success?style=flat-square)](LICENSE)
 
-[**Website**](https://misty-launcher.online/) · [**Patch notes**](https://misty-launcher.online/patch-notes) · [**Launcher**](https://github.com/Misty-MC/Misty) · [**Releases**](https://github.com/Misty-MC/Misty/releases)
+[**Website**](https://misty-launcher.online/) · [**Docs**](https://misty-launcher.online/docs) · [**Patch notes**](https://misty-launcher.online/patch-notes) · [**Launcher**](https://github.com/Misty-MC/Misty) · [**Releases**](https://github.com/Misty-MC/Misty/releases)
 
 </div>
 
@@ -24,21 +24,24 @@ Rendered server-side in Rust: pages, translations, patch notes and the pixel-art
 ```
 src/
 ├── main.rs            startup, routes, static files
-├── routes.rs          pages, /api/latest, /download/*
+├── routes.rs          pages, /docs, /api/latest, /download/*
+├── docs.rs            documentation pages (docs/<lang>/NN-slug.md)
 ├── github.rs          GitHub releases + cache
 ├── i18n.rs            language negotiation and translations
-├── markdown.rs        release notes Markdown → safe HTML
+├── markdown.rs        Markdown → safe HTML (release notes and docs)
 ├── format.rs          localized dates and sizes
 ├── scene.rs           pixel-art night scene and fog (SVG)
 └── views/             HTML pages (maud)
     ├── layout.rs      <head>, navigation, footer
     ├── home.rs        home page
     ├── patch_notes.rs patch notes
+    ├── docs.rs        documentation
     ├── not_found.rs   404
     └── icons.rs       SVG icons
 locales/               one TOML file per language
+docs/                  documentation, one folder per language (en is the reference)
 public/
-├── css/               base, layout, home, patch-notes
+├── css/               base, layout, home, patch-notes, docs
 ├── js/site.js         smooth scrolling, navigation, animations
 └── assets/            icon, Silkscreen font, screenshots
 ```

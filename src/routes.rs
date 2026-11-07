@@ -1,8 +1,10 @@
 //! Routes HTTP : pages, API JSON et téléchargements.
 
 use crate::AppState;
+use crate::docs;
 use crate::github::{self, Kind};
 use crate::i18n::{self, Lang};
+use crate::views::docs as docs_view;
 use crate::views::{home, layout::Page, not_found, patch_notes};
 use axum::body::Body;
 use axum::extract::{Path, Query, State};
@@ -89,6 +91,45 @@ pub async fn patch_notes(
         &state.scene_notes,
     );
     html_response(StatusCode::OK, markup, lang, remember)
+}
+
+pub async fn docs_index(
+    State(state): State<Arc<AppState>>,
+    Query(q): Query<PageQuery>,
+    headers: HeaderMap,
+) -> Response {
+    let (lang, remember) = i18n::negotiate(q.lang.as_deref(), &headers);
+    let count = state.github.releases().await.map(|l| l.len());
+    let p = page(&state, lang, "/docs", count);
+    html_response(
+        StatusCode::OK,
+        docs_view::index(&p, docs::get(lang)),
+        lang,
+        remember,
+    )
+}
+
+pub async fn docs_page(
+    State(state): State<Arc<AppState>>,
+    Path(slug): Path<String>,
+    Query(q): Query<PageQuery>,
+    uri: Uri,
+    headers: HeaderMap,
+) -> Response {
+    let (lang, remember) = i18n::negotiate(q.lang.as_deref(), &headers);
+    let set = docs::get(lang);
+    let Some(idx) = set.find(&slug) else {
+        return not_found(State(state), uri, headers).await;
+    };
+    let count = state.github.releases().await.map(|l| l.len());
+    let path = uri.path().to_string();
+    let p = page(&state, lang, &path, count);
+    html_response(
+        StatusCode::OK,
+        docs_view::page(&p, set, idx),
+        lang,
+        remember,
+    )
 }
 
 pub async fn not_found(

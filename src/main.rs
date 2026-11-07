@@ -7,6 +7,7 @@
 //! - `MISTY_PUBLIC_DIR` (`public` par défaut) : fichiers statiques (CSS, JS, images, polices)
 //! - `GITHUB_API` (`https://api.github.com` par défaut) : utile pour tester avec une fausse API
 
+mod docs;
 mod format;
 mod github;
 mod i18n;
@@ -41,6 +42,7 @@ fn env_or(key: &str, default: &str) -> String {
 #[tokio::main]
 async fn main() {
     i18n::init();
+    docs::init();
 
     let state = Arc::new(AppState {
         github: github::GitHub::new(
@@ -73,6 +75,8 @@ async fn main() {
     let app = Router::new()
         .route("/", get(routes::index))
         .route("/patch-notes", get(routes::patch_notes))
+        .route("/docs", get(routes::docs_index))
+        .route("/docs/{slug}", get(routes::docs_page))
         .route("/api/latest", get(routes::api_latest))
         .route("/download/{kind}", get(routes::download))
         .fallback_service(static_files)

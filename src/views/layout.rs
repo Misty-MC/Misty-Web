@@ -81,6 +81,7 @@ fn nav(p: &Page) -> Markup {
                     a href="/#features" { (tr.nav_features) }
                     a href="/#loaders" { (tr.nav_loaders) }
                     a href="/#faq" { (tr.nav_faq) }
+                    a href="/docs" aria-current=[p.path.starts_with("/docs").then_some("page")] { (tr.nav_docs) }
                     a href="/patch-notes" aria-current=[on_notes.then_some("page")] {
                         (tr.nav_patch_notes)
                         @if let Some(n) = p.release_count { span.count { (n) } }
@@ -131,6 +132,7 @@ fn footer(p: &Page) -> Markup {
                             li { a href="/#features" { (tr.nav_features) } }
                             li { a href="/#loaders" { (tr.nav_loaders) } }
                             li { a href="/#faq" { (tr.nav_faq) } }
+                            li { a href="/docs" { (tr.docs_label) } }
                             li { a href="/patch-notes" { (tr.nav_patch_notes) } }
                         }
                     }
