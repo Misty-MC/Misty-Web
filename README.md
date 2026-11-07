@@ -57,17 +57,18 @@ Release files must keep the names `Misty-Setup-<version>.exe` and `Misty-<versio
 The site ships as a Docker image ([`Dockerfile`](Dockerfile)) and runs on [Coolify](https://coolify.io):
 **Build Pack: Dockerfile**, exposed port **3000**.
 
-Each push to `main` can be deployed through [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml):
+Each push to `main` is deployed through [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml):
 the workflow starts the Coolify deployment, waits for it to finish and reports the result in the
-**Deployments** panel of this repository. It needs:
+**Deployments** panel of this repository. Settings (Settings → Secrets and variables → Actions,
+as secrets or variables):
 
-| Where (Settings → Secrets and variables → Actions) | Name | Value |
+| Name | Required | Value |
 |---|---|---|
-| Variable | `COOLIFY_URL` | URL of the Coolify instance, e.g. `https://coolify.example.com` |
-| Variable | `COOLIFY_APP_UUID` | UUID of the application in Coolify |
-| Secret | `COOLIFY_TOKEN` | Coolify API token with the *deploy* permission |
+| `COOLIFY_TOKEN` | yes (secret) | Coolify API token with the *deploy* and *read* permissions (*read* lets the workflow follow the result) |
+| `COOLIFY_URL` | no | URL of the Coolify instance (defaults to the Misty one) |
+| `COOLIFY_APP_UUID` | no (variable) | UUID of the application in Coolify (defaults to the site) |
 
-Until these are set, the workflow is skipped.
+The workflow can also be started by hand from the **Actions** tab (*Run workflow*).
 
 <details>
 <summary><b>🗂️ Project structure</b></summary>

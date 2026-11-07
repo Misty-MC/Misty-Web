@@ -1,11 +1,11 @@
 # Déploie le site sur Coolify à chaque push sur main, et affiche le résultat dans
 # le panneau « Deployments » du dépôt (environnement « production »).
 #
-# À configurer dans Settings → Secrets and variables → Actions :
-#   - variable COOLIFY_URL      : adresse de l'instance Coolify (ex. https://coolify.example.com)
-#   - variable COOLIFY_APP_UUID : UUID de l'application dans Coolify
-#   - secret   COOLIFY_TOKEN    : token API Coolify avec la permission « deploy »
-# Tant que les variables ne sont pas définies, le job est ignoré.
+# Réglages (Settings → Secrets and variables → Actions), en secret ou en variable :
+#   - COOLIFY_TOKEN    (obligatoire, en secret) : token API Coolify avec les permissions « deploy » et « read »
+#                       (sans « read », le déploiement est lancé mais son résultat n'est pas suivi)
+#   - COOLIFY_URL      (facultatif) : adresse de l'instance Coolify, https://panel.enderr.win par défaut
+#   - COOLIFY_APP_UUID (facultatif, en variable) : UUID de l'application dans Coolify, celle du site par défaut
 # Pensez à désactiver l'« Auto Deploy » dans Coolify pour ne pas déployer deux fois.
 name: Deploy
 
@@ -24,7 +24,6 @@ permissions:
 jobs:
   deploy:
     name: Coolify
-    if: vars.COOLIFY_URL != '' && vars.COOLIFY_APP_UUID != ''
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
@@ -33,15 +32,21 @@ jobs:
     steps:
       - name: Lancer le déploiement et attendre la fin
         env:
-          COOLIFY_URL: ${{ vars.COOLIFY_URL }}
-          COOLIFY_APP_UUID: ${{ vars.COOLIFY_APP_UUID }}
+          COOLIFY_URL: ${{ vars.COOLIFY_URL || secrets.COOLIFY_URL || 'https://panel.enderr.win' }}
+          # UUID de l'application du site dans Coolify (pas un secret).
+          COOLIFY_APP_UUID: ${{ vars.COOLIFY_APP_UUID || '68wabiwd7glmjqiizbwfntzo' }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
         run: |
           set -euo pipefail
+          if [ -z "${COOLIFY_TOKEN}" ]; then
+            echo "::error::Le secret COOLIFY_TOKEN n'est pas défini (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
           api="${COOLIFY_URL%/}/api/v1"
           auth="Authorization: Bearer ${COOLIFY_TOKEN}"
 
-          res=$(curl -fsS -H "$auth" "$api/deploy?uuid=${COOLIFY_APP_UUID}&force=false")
+          # Les versions récentes de Coolify n'acceptent que POST pour lancer un déploiement.
+          res=$(curl -fsS -X POST -H "$auth" "$api/deploy?uuid=${COOLIFY_APP_UUID}&force=false")
           echo "$res"
           id=$(echo "$res" | jq -r '.deployments[0].deployment_uuid // empty')
           if [ -z "$id" ]; then
@@ -50,8 +55,15 @@ jobs:
           fi
 
           # Suivi du déploiement (jusqu'à 25 minutes).
+          # Le suivi demande la permission « read » sur le token : sans elle, on s'arrête là.
           for _ in $(seq 1 150); do
-            status=$(curl -fsS -H "$auth" "$api/deployments/$id" | jq -r '.status')
+            code=$(curl -sS -o deployment.json -w '%{http_code}' -H "$auth" "$api/deployments/$id")
+            if [ "$code" = "401" ] || [ "$code" = "403" ]; then
+              echo "::warning::Déploiement lancé, mais le token Coolify n'a pas la permission « read » : impossible de suivre son résultat."
+              exit 0
+            fi
+            [ "$code" = "200" ] || { echo "Coolify a répondu $code"; exit 1; }
+            status=$(jq -r '.status' deployment.json)
             echo "Statut : $status"
             case "$status" in
               finished) exit 0 ;;
