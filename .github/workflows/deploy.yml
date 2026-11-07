@@ -43,7 +43,8 @@ jobs:
           api="${COOLIFY_URL%/}/api/v1"
           auth="Authorization: Bearer ${COOLIFY_TOKEN}"
 
-          res=$(curl -fsS -H "$auth" "$api/deploy?uuid=${COOLIFY_APP_UUID}&force=false")
+          # Les versions récentes de Coolify n'acceptent que POST pour lancer un déploiement.
+          res=$(curl -fsS -X POST -H "$auth" "$api/deploy?uuid=${COOLIFY_APP_UUID}&force=false")
           echo "$res"
           id=$(echo "$res" | jq -r '.deployments[0].deployment_uuid // empty')
           if [ -z "$id" ]; then
