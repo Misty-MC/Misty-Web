@@ -19,59 +19,7 @@ Rendered server-side in Rust: pages, translations, patch notes and the pixel-art
 
 </div>
 
----
-
-## ✨ Features
-
-- **Home page**: hero with the latest version, screenshots, features, mod loaders, downloads and FAQ.
-- **Patch notes** (`/patch-notes`): every release from GitHub, with stable / pre-release filters, notes you can expand and each version's files.
-- **Direct downloads**: `/download/setup` and `/download/portable` relay the latest installer or zip from GitHub, so visitors never leave the site.
-- **5 languages**: Français, English, Español, Русский, Italiano, chosen server-side (`?lang=`, then a cookie, then the browser's language).
-- **Animated night scene**: misty mountains, a floating moon and drifting fog, generated in Rust as pixel-art SVG.
-- **Light**: no front-end framework. A single small script adds smooth scrolling and animations, and the site still works without it.
-
-## 🚀 Getting started
-
-```bash
-cargo run          # http://localhost:3000
-cargo test         # translations, Markdown safety, dates, scene…
-```
-
-Requires [Rust](https://rustup.rs) (stable, edition 2024).
-
-## ⚙️ Configuration
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `PORT` | `3000` | Port to listen on |
-| `GITHUB_TOKEN` | – | Token with no permissions, to avoid GitHub API rate limits (recommended) |
-| `MISTY_REPO` | `Misty-MC/Misty` | Repository whose releases are shown |
-| `MISTY_PUBLIC_DIR` | `public` | Static files folder |
-| `GITHUB_API` | `https://api.github.com` | Point to a fake API for testing |
-
-Releases are cached for 2 minutes, so a new release shows up on its own.
-Release files must keep the names `Misty-Setup-<version>.exe` and `Misty-<version>.zip`.
-
-## 📦 Deployment
-
-The site ships as a Docker image ([`Dockerfile`](Dockerfile)) and runs on [Coolify](https://coolify.io):
-**Build Pack: Dockerfile**, exposed port **3000**.
-
-Each push to `main` is deployed through [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml):
-the workflow starts the Coolify deployment, waits for it to finish and reports the result in the
-**Deployments** panel of this repository. Settings (Settings → Secrets and variables → Actions,
-as secrets or variables):
-
-| Name | Required | Value |
-|---|---|---|
-| `COOLIFY_TOKEN` | yes (secret) | Coolify API token with the *deploy* and *read* permissions (*read* lets the workflow follow the result) |
-| `COOLIFY_URL` | no | URL of the Coolify instance (defaults to the Misty one) |
-| `COOLIFY_APP_UUID` | no (variable) | UUID of the application in Coolify (defaults to the site) |
-
-The workflow can also be started by hand from the **Actions** tab (*Run workflow*).
-
-<details>
-<summary><b>🗂️ Project structure</b></summary>
+## 🗂️ Project structure
 
 ```
 src/
@@ -94,17 +42,6 @@ public/
 ├── js/site.js         smooth scrolling, navigation, animations
 └── assets/            icon, Silkscreen font, screenshots
 ```
-
-</details>
-
-<details>
-<summary><b>🌍 Adding a language</b></summary>
-
-1. Copy `locales/en.toml` to `locales/<code>.toml` and translate the values.
-2. Register the language in `src/i18n.rs` (`Lang` enum, `Lang::ALL`, `code()` and `TRANSLATIONS`).
-3. Run `cargo test`: it fails if a key is missing.
-
-</details>
 
 ## 📄 License
 
