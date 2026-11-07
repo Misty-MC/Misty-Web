@@ -37,6 +37,70 @@
     items.forEach(el => el.classList.add("in"));
   }
 
+  // ---------- Documentation ----------
+  // Recherche instantanée : filtre les pages (titre + description) de la liste voisine.
+  document.querySelectorAll(".docs-search input").forEach(input => {
+    const scope = input.closest(".docs-side") || input.closest(".docs-hero")?.parentElement || document;
+    const filter = () => {
+      const q = input.value.trim().toLowerCase();
+      const lists = scope.querySelectorAll(".docs-nav, .docs-map");
+      lists.forEach(list => {
+        let shown = 0;
+        list.querySelectorAll("li[data-search]").forEach(li => {
+          const ok = !q || q.split(/\s+/).every(w => li.dataset.search.includes(w));
+          li.hidden = !ok;
+          if (ok) shown++;
+        });
+        list.querySelectorAll(".nav-sec, .map-sec").forEach(sec => {
+          sec.hidden = !sec.querySelector("li[data-search]:not([hidden])");
+        });
+        const empty = list.querySelector(".docs-empty");
+        if (empty) empty.hidden = shown > 0;
+      });
+    };
+    input.addEventListener("input", filter);
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        const first = scope.querySelector("li[data-search]:not([hidden]) a");
+        if (first) location.href = first.href;
+      } else if (e.key === "Escape") {
+        input.value = ""; filter(); input.blur();
+      }
+    });
+  });
+  // « / » place le curseur dans la recherche
+  document.addEventListener("keydown", e => {
+    if (e.key !== "/" || e.ctrlKey || e.metaKey || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+    const input = [...document.querySelectorAll(".docs-search input")].find(i => i.offsetParent);
+    if (input) { e.preventDefault(); input.focus(); }
+  });
+
+  // Bouton « copier » sur les blocs de code
+  document.querySelectorAll(".md-doc pre").forEach(pre => {
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.className = "copy"; btn.textContent = "Copy";
+    btn.addEventListener("click", () => {
+      navigator.clipboard?.writeText(pre.querySelector("code")?.innerText ?? pre.innerText).then(() => {
+        btn.textContent = "✓"; btn.classList.add("done");
+        setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("done"); }, 1500);
+      });
+    });
+    pre.appendChild(btn);
+  });
+
+  // Sommaire : met en avant la section en cours de lecture
+  const tocLinks = [...document.querySelectorAll(".docs-toc a")];
+  if (tocLinks.length && "IntersectionObserver" in window) {
+    const byId = new Map(tocLinks.map(a => [decodeURIComponent(a.hash.slice(1)), a]));
+    const visible = new Set();
+    const spy = new IntersectionObserver(entries => {
+      entries.forEach(e => e.isIntersecting ? visible.add(e.target.id) : visible.delete(e.target.id));
+      const current = [...byId.keys()].find(id => visible.has(id));
+      if (current) tocLinks.forEach(a => a.classList.toggle("active", a === byId.get(current)));
+    }, { rootMargin: "-80px 0px -60% 0px" });
+    byId.forEach((_, id) => { const h = document.getElementById(id); if (h) spy.observe(h); });
+  }
+
   if (reduce) return;
 
   // Défilement fluide à la molette (inertie douce) et sur les liens d'ancre de la page
