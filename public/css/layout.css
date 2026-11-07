@@ -1,5 +1,17 @@
 /* Barre de navigation et pied de page. */
 
+/* ---------- Fond commun : ciel et paysage en haut de chaque page ---------- */
+.page-sky{
+  position:absolute;top:0;left:0;right:0;height:clamp(680px,100vh,940px);z-index:0;overflow:hidden;pointer-events:none;
+  background:
+    radial-gradient(900px 480px at 85% 62%,rgba(111,156,255,.22),transparent 70%),
+    radial-gradient(700px 400px at 10% 0%,rgba(111,156,255,.12),transparent 70%),
+    linear-gradient(180deg,#0b1224 0%,#111d3d 60%,#152448 78%,var(--bg) 100%);
+  /* Fondu vers le bas : le paysage se fond dans la page, sans coupure nette. */
+  -webkit-mask-image:linear-gradient(180deg,#000 72%,transparent);mask-image:linear-gradient(180deg,#000 72%,transparent);
+}
+.page-sky .scene{position:absolute;left:0;bottom:0;width:100%;height:clamp(300px,40vw,560px);-webkit-mask-image:linear-gradient(180deg,transparent,#000 16%);mask-image:linear-gradient(180deg,transparent,#000 16%)}
+
 /* ---------- Navigation ---------- */
 .nav{position:sticky;top:0;z-index:50;border-bottom:1px solid transparent;transition:background .25s,border-color .25s}
 .nav.scrolled{background:rgba(10,15,29,.78);border-color:var(--line);backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3)}

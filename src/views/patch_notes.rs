@@ -38,11 +38,10 @@ impl Filter {
     }
 }
 
-pub fn render(p: &Page, releases: Option<&[Release]>, filter: Filter, scene: &str) -> Markup {
+pub fn render(p: &Page, releases: Option<&[Release]>, filter: Filter) -> Markup {
     let tr = p.tr;
     let main = html! {
         section.hero.pn-hero {
-            div.sky aria-hidden="true" { (PreEscaped(scene)) }
             div.wrap { div.pn-copy {
                 div.tags {
                     span { (tr.pn_label) }

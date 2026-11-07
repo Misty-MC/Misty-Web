@@ -1,9 +1,6 @@
 /* Page des patch notes et page 404 (chargée après home.css, dont elle réutilise le hero). */
 
 .pn-hero{padding-bottom:clamp(200px,26vw,360px)}
-.pn-hero .sky{background:
-  radial-gradient(700px 420px at 70% 70%,rgba(111,156,255,.28),transparent 70%),
-  linear-gradient(180deg,#0b1224 0%,#111d3d 60%,#152448 80%,var(--bg) 100%)}
 .pn-copy{max-width:720px}
 .pn-copy .tags a:hover{color:var(--text)}
 

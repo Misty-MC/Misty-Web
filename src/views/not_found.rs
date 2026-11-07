@@ -1,13 +1,12 @@
 //! Page 404.
 
 use super::layout::{self, Head, Page};
-use maud::{Markup, PreEscaped, html};
+use maud::{Markup, html};
 
-pub fn render(p: &Page, scene: &str) -> Markup {
+pub fn render(p: &Page) -> Markup {
     let tr = p.tr;
     let main = html! {
         section.hero.nf {
-            div.sky aria-hidden="true" { (PreEscaped(scene)) }
             div.wrap { div.pn-copy {
                 div.code { "404" }
                 h1 { (tr.nf_title) }

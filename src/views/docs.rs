@@ -19,7 +19,6 @@ pub fn index(p: &Page, set: &DocSet) -> Markup {
                 p.sub { (tr.docs_sub) }
                 (search_box(p))
             }
-            div.docs-fog aria-hidden="true" { (PreEscaped(p.fog)) }
         }
         section.wrap.docs-map {
             (untranslated(p, set))

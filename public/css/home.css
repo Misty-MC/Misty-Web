@@ -2,16 +2,6 @@
 
 /* ---------- Hero ---------- */
 .hero{position:relative;isolation:isolate;margin-top:-65px;padding:calc(65px + clamp(48px,8vw,104px)) 0 clamp(220px,30vw,400px)}
-.sky{
-  position:absolute;inset:0;z-index:-1;overflow:hidden;
-  background:
-    radial-gradient(900px 480px at 78% 62%,rgba(111,156,255,.22),transparent 70%),
-    radial-gradient(700px 400px at 10% 0%,rgba(111,156,255,.12),transparent 70%),
-    linear-gradient(180deg,#0b1224 0%,#111d3d 60%,#152448 78%,var(--bg) 100%);
-  /* Fondu vers le bas : le paysage se fond dans la page, sans coupure nette. */
-  -webkit-mask-image:linear-gradient(180deg,#000 72%,transparent);mask-image:linear-gradient(180deg,#000 72%,transparent);
-}
-.sky .scene{position:absolute;left:0;bottom:0;width:100%;height:clamp(300px,40vw,560px);-webkit-mask-image:linear-gradient(180deg,transparent,#000 16%);mask-image:linear-gradient(180deg,transparent,#000 16%)}
 .hero-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:clamp(32px,5vw,72px);align-items:start}
 .tags{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;font-size:13.5px;color:var(--muted)}
 .tags span,.tags a{display:inline-flex;align-items:center;gap:7px}

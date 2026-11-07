@@ -26,8 +26,8 @@ use tower_http::set_header::SetResponseHeaderLayer;
 
 pub struct AppState {
     pub github: github::GitHub,
-    pub scene_home: String,
-    pub scene_notes: String,
+    /// Paysage de fond, le même sur toutes les pages.
+    pub scene: String,
     /// Bande de brume pixel, insérée entre les sections.
     pub fog_strip: String,
 }
@@ -50,17 +50,12 @@ async fn main() {
             env_or("MISTY_REPO", "Misty-MC/Misty"),
             std::env::var("GITHUB_TOKEN").ok().filter(|t| !t.is_empty()),
         ),
-        scene_home: scene::render(&scene::SceneOptions {
+        scene: scene::render(&scene::SceneOptions {
             seed: 7,
-            moon_x: 0.78,
-            moon_r: 40,
+            moon_x: 0.8,
+            moon_r: 44,
         }),
         fog_strip: scene::fog_strip(11),
-        scene_notes: scene::render(&scene::SceneOptions {
-            seed: 21,
-            moon_x: 0.7,
-            moon_r: 56,
-        }),
     });
 
     let static_files = ServeDir::new(env_or("MISTY_PUBLIC_DIR", "public"))
@@ -75,6 +70,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(routes::index))
         .route("/patch-notes", get(routes::patch_notes))
+        .route("/shop", get(routes::shop))
         .route("/docs", get(routes::docs_index))
         .route("/docs/search.json", get(routes::docs_search_index))
         .route("/docs/{slug}", get(routes::docs_page))

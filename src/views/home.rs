@@ -5,15 +5,15 @@ use super::layout::{self, Head, Page};
 use crate::format;
 use crate::github::{Kind, Release};
 use crate::markdown;
-use maud::{Markup, PreEscaped, html};
+use maud::{Markup, html};
 
 /// Mod loaders proposés par le launcher (Quilt y est désactivé).
 const LOADERS: [&str; 5] = ["Forge", "NeoForge", "Fabric", "OptiFine", "LiteLoader"];
 
-pub fn render(p: &Page, latest: Option<&Release>, scene: &str) -> Markup {
+pub fn render(p: &Page, latest: Option<&Release>) -> Markup {
     let tr = p.tr;
     let main = html! {
-        (hero(p, latest, scene))
+        (hero(p, latest))
         (preview(p))
         (layout::fog_divider(p))
 
@@ -85,12 +85,11 @@ pub fn render(p: &Page, latest: Option<&Release>, scene: &str) -> Markup {
     )
 }
 
-fn hero(p: &Page, latest: Option<&Release>, scene: &str) -> Markup {
+fn hero(p: &Page, latest: Option<&Release>) -> Markup {
     let tr = p.tr;
     let setup = latest.and_then(|r| r.asset(Kind::Setup));
     html! {
         section.hero {
-            div.sky aria-hidden="true" { (PreEscaped(scene)) }
             div.wrap.hero-grid {
                 div.hero-copy {
                     div.tags {
