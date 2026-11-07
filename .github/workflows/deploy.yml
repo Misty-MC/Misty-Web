@@ -1,0 +1,63 @@
+# Déploie le site sur Coolify à chaque push sur main, et affiche le résultat dans
+# le panneau « Deployments » du dépôt (environnement « production »).
+#
+# À configurer dans Settings → Secrets and variables → Actions :
+#   - variable COOLIFY_URL      : adresse de l'instance Coolify (ex. https://coolify.example.com)
+#   - variable COOLIFY_APP_UUID : UUID de l'application dans Coolify
+#   - secret   COOLIFY_TOKEN    : token API Coolify avec la permission « deploy »
+# Tant que les variables ne sont pas définies, le job est ignoré.
+# Pensez à désactiver l'« Auto Deploy » dans Coolify pour ne pas déployer deux fois.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Coolify
+    if: vars.COOLIFY_URL != '' && vars.COOLIFY_APP_UUID != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://misty-launcher.online
+    steps:
+      - name: Lancer le déploiement et attendre la fin
+        env:
+          COOLIFY_URL: ${{ vars.COOLIFY_URL }}
+          COOLIFY_APP_UUID: ${{ vars.COOLIFY_APP_UUID }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          set -euo pipefail
+          api="${COOLIFY_URL%/}/api/v1"
+          auth="Authorization: Bearer ${COOLIFY_TOKEN}"
+
+          res=$(curl -fsS -H "$auth" "$api/deploy?uuid=${COOLIFY_APP_UUID}&force=false")
+          echo "$res"
+          id=$(echo "$res" | jq -r '.deployments[0].deployment_uuid // empty')
+          if [ -z "$id" ]; then
+            echo "Coolify n'a pas renvoyé d'identifiant de déploiement."
+            exit 1
+          fi
+
+          # Suivi du déploiement (jusqu'à 25 minutes).
+          for _ in $(seq 1 150); do
+            status=$(curl -fsS -H "$auth" "$api/deployments/$id" | jq -r '.status')
+            echo "Statut : $status"
+            case "$status" in
+              finished) exit 0 ;;
+              failed|cancelled*|error) exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "Le déploiement n'a pas fini à temps."
+          exit 1

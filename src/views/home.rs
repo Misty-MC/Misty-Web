@@ -100,7 +100,7 @@ fn hero(p: &Page, latest: Option<&Release>, scene: &str) -> Markup {
             div.wrap.hero-grid {
                 div.hero-copy {
                     div.tags {
-                        span { img src="/assets/icone.png" alt="" width="14" height="16"; (tr.hero_tag_mc) }
+                        span { (icons::cube()) (tr.hero_tag_mc) }
                         span.sep { "·" }
                         span { (icons::rust()) (tr.hero_tag_rust) }
                     }
