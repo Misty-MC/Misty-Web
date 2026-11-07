@@ -64,7 +64,7 @@ as secrets or variables):
 
 | Name | Required | Value |
 |---|---|---|
-| `COOLIFY_TOKEN` | yes (secret) | Coolify API token with the *deploy* permission |
+| `COOLIFY_TOKEN` | yes (secret) | Coolify API token with the *deploy* and *read* permissions (*read* lets the workflow follow the result) |
 | `COOLIFY_URL` | no | URL of the Coolify instance (defaults to the Misty one) |
 | `COOLIFY_APP_UUID` | no (variable) | UUID of the application in Coolify (defaults to the site) |
 

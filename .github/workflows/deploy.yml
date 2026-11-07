@@ -2,7 +2,8 @@
 # le panneau « Deployments » du dépôt (environnement « production »).
 #
 # Réglages (Settings → Secrets and variables → Actions), en secret ou en variable :
-#   - COOLIFY_TOKEN    (obligatoire, en secret) : token API Coolify avec la permission « deploy »
+#   - COOLIFY_TOKEN    (obligatoire, en secret) : token API Coolify avec les permissions « deploy » et « read »
+#                       (sans « read », le déploiement est lancé mais son résultat n'est pas suivi)
 #   - COOLIFY_URL      (facultatif) : adresse de l'instance Coolify, https://panel.enderr.win par défaut
 #   - COOLIFY_APP_UUID (facultatif, en variable) : UUID de l'application dans Coolify, celle du site par défaut
 # Pensez à désactiver l'« Auto Deploy » dans Coolify pour ne pas déployer deux fois.
@@ -54,8 +55,15 @@ jobs:
           fi
 
           # Suivi du déploiement (jusqu'à 25 minutes).
+          # Le suivi demande la permission « read » sur le token : sans elle, on s'arrête là.
           for _ in $(seq 1 150); do
-            status=$(curl -fsS -H "$auth" "$api/deployments/$id" | jq -r '.status')
+            code=$(curl -sS -o deployment.json -w '%{http_code}' -H "$auth" "$api/deployments/$id")
+            if [ "$code" = "401" ] || [ "$code" = "403" ]; then
+              echo "::warning::Déploiement lancé, mais le token Coolify n'a pas la permission « read » : impossible de suivre son résultat."
+              exit 0
+            fi
+            [ "$code" = "200" ] || { echo "Coolify a répondu $code"; exit 1; }
+            status=$(jq -r '.status' deployment.json)
             echo "Statut : $status"
             case "$status" in
               finished) exit 0 ;;
