@@ -26,6 +26,8 @@ pub struct Page<'a> {
     pub repo: &'a str,
     /// Bande de brume animée (SVG), réutilisée entre les sections.
     pub fog: &'a str,
+    /// Paysage de fond (SVG), identique sur toutes les pages.
+    pub scene: &'a str,
 }
 
 impl Page<'_> {
@@ -67,6 +69,8 @@ pub fn render(p: &Page, head: Head, main: Markup) -> Markup {
             body class=(head.body_class) {
                 // Voile de brume qui dérive derrière tout le site.
                 div.mist aria-hidden="true" { div.m1 {} div.m2 {} div.m3 {} }
+                // Ciel et paysage : le même fond en haut de chaque page.
+                div.page-sky aria-hidden="true" { (PreEscaped(p.scene)) }
                 (nav(p))
                 main #main { (main) }
                 (fog_divider(p))
@@ -93,6 +97,7 @@ fn nav(p: &Page) -> Markup {
                     a href="/#loaders" { (tr.nav_loaders) }
                     a href="/#faq" { (tr.nav_faq) }
                     a href="/docs" aria-current=[p.path.starts_with("/docs").then_some("page")] { (tr.nav_docs) }
+                    a href="/shop" aria-current=[p.path.starts_with("/shop").then_some("page")] { (tr.nav_shop) }
                     a href="/patch-notes" aria-current=[on_notes.then_some("page")] {
                         (tr.nav_patch_notes)
                         @if let Some(n) = p.release_count { span.count { (n) } }
@@ -124,6 +129,7 @@ fn mobile_menu(p: &Page) -> Markup {
                 a href="/#loaders" { (tr.nav_loaders) }
                 a href="/#faq" { (tr.nav_faq) }
                 a href="/docs" aria-current=[here("/docs")] { (tr.nav_docs) }
+                a href="/shop" aria-current=[here("/shop")] { (tr.nav_shop) }
                 a href="/patch-notes" aria-current=[here("/patch-notes")] {
                     (tr.nav_patch_notes)
                     @if let Some(n) = p.release_count { span.count { (n) } }
@@ -169,6 +175,7 @@ fn footer(p: &Page) -> Markup {
                             li { a href="/#loaders" { (tr.nav_loaders) } }
                             li { a href="/#faq" { (tr.nav_faq) } }
                             li { a href="/docs" { (tr.docs_label) } }
+                            li { a href="/shop" { (tr.nav_shop) } }
                             li { a href="/patch-notes" { (tr.nav_patch_notes) } }
                         }
                     }

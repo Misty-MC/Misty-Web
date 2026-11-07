@@ -5,6 +5,7 @@ use crate::docs;
 use crate::github::{self, Kind};
 use crate::i18n::{self, Lang};
 use crate::views::docs as docs_view;
+use crate::views::shop::{self, ShopView};
 use crate::views::{home, layout::Page, not_found, patch_notes};
 use axum::body::Body;
 use axum::extract::{Path, Query, State};
@@ -18,6 +19,10 @@ use std::sync::Arc;
 pub struct PageQuery {
     lang: Option<String>,
     filter: Option<String>,
+    /// Boutique : pseudo Minecraft saisi.
+    player: Option<String>,
+    /// Boutique : revenir au formulaire pour changer de pseudo.
+    change: Option<String>,
 }
 
 /// Réponse HTML : pose le cookie de langue si elle vient d'être choisie avec `?lang=`.
@@ -50,6 +55,7 @@ fn page<'a>(state: &'a AppState, lang: Lang, path: &'a str, count: Option<usize>
         release_count: count,
         repo: state.github.repo(),
         fog: &state.fog_strip,
+        scene: &state.scene,
     }
 }
 
@@ -62,12 +68,7 @@ pub async fn index(
     let releases = state.github.releases().await;
     let latest = releases.as_deref().and_then(|l| github::latest(l));
     let p = page(&state, lang, "/", releases.as_ref().map(|l| l.len()));
-    html_response(
-        StatusCode::OK,
-        home::render(&p, latest, &state.scene_home),
-        lang,
-        remember,
-    )
+    html_response(StatusCode::OK, home::render(&p, latest), lang, remember)
 }
 
 pub async fn patch_notes(
@@ -84,12 +85,7 @@ pub async fn patch_notes(
         releases.as_ref().map(|l| l.len()),
     );
     let filter = patch_notes::Filter::from_query(q.filter.as_deref());
-    let markup = patch_notes::render(
-        &p,
-        releases.as_deref().map(|v| v.as_slice()),
-        filter,
-        &state.scene_notes,
-    );
+    let markup = patch_notes::render(&p, releases.as_deref().map(|v| v.as_slice()), filter);
     html_response(StatusCode::OK, markup, lang, remember)
 }
 
@@ -132,6 +128,62 @@ pub async fn docs_page(
     )
 }
 
+const PLAYER_COOKIE: &str = "misty-player";
+
+fn read_cookie<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
+    headers
+        .get_all(header::COOKIE)
+        .iter()
+        .filter_map(|v| v.to_str().ok())
+        .flat_map(|v| v.split(';'))
+        .filter_map(|c| c.trim().split_once('='))
+        .find(|(k, _)| *k == name)
+        .map(|(_, v)| v)
+}
+
+/// Boutique : formulaire du pseudo, puis « bientôt disponible ».
+/// Le pseudo validé est retenu dans un cookie pour les visites suivantes.
+pub async fn shop(
+    State(state): State<Arc<AppState>>,
+    Query(q): Query<PageQuery>,
+    headers: HeaderMap,
+) -> Response {
+    let (lang, remember) = i18n::negotiate(q.lang.as_deref(), &headers);
+    let count = state.github.releases().await.map(|l| l.len());
+    let p = page(&state, lang, "/shop", count);
+    let saved = read_cookie(&headers, PLAYER_COOKIE).filter(|n| shop::valid_username(n));
+    let typed = q.player.as_deref().map(str::trim);
+
+    let (view, new_player) = match (typed, q.change.is_some(), saved) {
+        (Some(name), _, _) if shop::valid_username(name) => {
+            (ShopView::Soon { player: name }, Some(name))
+        }
+        (Some(name), _, _) => (
+            ShopView::Form {
+                value: name,
+                invalid: !name.is_empty(),
+            },
+            None,
+        ),
+        (None, false, Some(name)) => (ShopView::Soon { player: name }, None),
+        (None, _, saved) => (
+            ShopView::Form {
+                value: saved.unwrap_or(""),
+                invalid: false,
+            },
+            None,
+        ),
+    };
+    let mut res = html_response(StatusCode::OK, shop::render(&p, view), lang, remember);
+    if let Some(name) = new_player {
+        let cookie = format!("{PLAYER_COOKIE}={name}; Path=/; Max-Age=31536000; SameSite=Lax");
+        if let Ok(v) = HeaderValue::from_str(&cookie) {
+            res.headers_mut().append(header::SET_COOKIE, v);
+        }
+    }
+    res
+}
+
 /// Index de recherche plein texte de la doc, chargé par site.js à la première recherche.
 pub async fn docs_search_index(Query(q): Query<PageQuery>, headers: HeaderMap) -> Response {
     let (lang, _) = i18n::negotiate(q.lang.as_deref(), &headers);
@@ -156,12 +208,7 @@ pub async fn not_found(
     let (lang, _) = i18n::negotiate(None, &headers);
     let path = uri.path().to_string();
     let p = page(&state, lang, &path, None);
-    html_response(
-        StatusCode::NOT_FOUND,
-        not_found::render(&p, &state.scene_notes),
-        lang,
-        false,
-    )
+    html_response(StatusCode::NOT_FOUND, not_found::render(&p), lang, false)
 }
 
 /// Infos de la dernière version (même format que l'ancienne fonction Cloudflare).

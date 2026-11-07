@@ -25,6 +25,25 @@ pub fn external() -> Markup {
 pub fn arrow_up() -> Markup {
     icon(r#"<path d="M12 19V5M5 12l7-7 7 7"/>"#)
 }
+pub fn bag() -> Markup {
+    icon(r#"<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>"#)
+}
+pub fn cape() -> Markup {
+    icon(r#"<path d="M8 3h8l1 3-1 15-4-2-4 2-1-15z"/><path d="M8 3l4 4 4-4"/>"#)
+}
+pub fn crown() -> Markup {
+    icon(r#"<path d="M3 8l4 4 5-7 5 7 4-4-2 11H5z"/>"#)
+}
+pub fn wings() -> Markup {
+    icon(
+        r#"<path d="M12 8c-2-4-7-5-10-3 1 5 4 8 10 9"/><path d="M12 8c2-4 7-5 10-3-1 5-4 8-10 9"/><path d="M12 8v12"/>"#,
+    )
+}
+pub fn sparkles() -> Markup {
+    icon(
+        r#"<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>"#,
+    )
+}
 pub fn menu() -> Markup {
     icon(r#"<path d="M4 6h16M4 12h16M4 18h16"/>"#)
 }

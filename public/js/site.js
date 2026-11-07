@@ -39,6 +39,18 @@
     items.forEach(el => el.classList.add("in"));
   }
 
+  // Cliquer sur la page où l'on est déjà (lien de la barre, logo…) : on remonte en haut
+  // en douceur au lieu de recharger la page.
+  document.addEventListener("click", e => {
+    const a = e.target.closest("a[href]");
+    if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || a.target === "_blank") return;
+    const url = new URL(a.href, location.href);
+    if (url.origin !== location.origin || url.pathname !== location.pathname || url.search || url.hash) return;
+    e.preventDefault();
+    if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+    scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+  });
+
   // ---------- Documentation ----------
   // Recherche instantanée : filtre les pages sur leur titre, description et intertitres,
   // puis sur tout leur texte dès que l'index plein texte est chargé (au premier caractère tapé).
