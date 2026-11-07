@@ -76,6 +76,7 @@ async fn main() {
         .route("/", get(routes::index))
         .route("/patch-notes", get(routes::patch_notes))
         .route("/docs", get(routes::docs_index))
+        .route("/docs/search.json", get(routes::docs_search_index))
         .route("/docs/{slug}", get(routes::docs_page))
         .route("/api/latest", get(routes::api_latest))
         .route("/download/{kind}", get(routes::download))

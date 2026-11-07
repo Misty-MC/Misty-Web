@@ -206,6 +206,10 @@ pub fn render_doc(src: &str) -> (String, Vec<TocEntry>) {
     }
     let mut html_out = String::with_capacity(src.len() * 3 / 2);
     html::push_html(&mut html_out, out.into_iter());
+    // Les tableaux défilent horizontalement dans leur propre cadre sur petit écran.
+    let html_out = html_out
+        .replace("<table>", "<div class=\"table-wrap\"><table>")
+        .replace("</table>", "</table></div>");
     (html_out, toc)
 }
 

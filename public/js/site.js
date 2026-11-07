@@ -10,12 +10,14 @@
   addEventListener("scroll", onScroll, { passive: true });
   onScroll();
 
-  // Menu de langue : fermeture au clic à côté ou avec Échap
-  const dd = document.querySelector(".langdd");
-  if (dd) {
-    document.addEventListener("click", e => { if (!dd.contains(e.target)) dd.open = false; });
-    document.addEventListener("keydown", e => { if (e.key === "Escape") dd.open = false; });
-  }
+  // Menus déroulants (langue, menu mobile) : fermeture au clic à côté ou avec Échap
+  const menus = [...document.querySelectorAll("details.langdd, details.burger")];
+  document.addEventListener("click", e => menus.forEach(m => { if (!m.contains(e.target)) m.open = false; }));
+  document.addEventListener("keydown", e => { if (e.key === "Escape") menus.forEach(m => { m.open = false; }); });
+  // Un lien choisi dans un menu le referme
+  menus.forEach(m => m.querySelectorAll("a").forEach(a => a.addEventListener("click", () => { m.open = false; })));
+  // Un seul menu ouvert à la fois
+  menus.forEach(m => m.addEventListener("toggle", () => { if (m.open) menus.forEach(o => { if (o !== m) o.open = false; }); }));
 
   // Patch notes : ouvrir la version visée par l'ancre (ex. /patch-notes#v0.3.1)
   const openFromHash = () => {
@@ -38,16 +40,24 @@
   }
 
   // ---------- Documentation ----------
-  // Recherche instantanée : filtre les pages (titre + description) de la liste voisine.
+  // Recherche instantanée : filtre les pages sur leur titre, description et intertitres,
+  // puis sur tout leur texte dès que l'index plein texte est chargé (au premier caractère tapé).
+  let fullText = null, loading = null;
+  const loadIndex = () => loading ??= fetch(`/docs/search.json?lang=${document.documentElement.lang}`)
+    .then(r => r.json())
+    .then(list => { fullText = new Map(list.map(e => [e.slug, e.text])); })
+    .catch(() => { fullText = new Map(); });
   document.querySelectorAll(".docs-search input").forEach(input => {
     const scope = input.closest(".docs-side") || input.closest(".docs-hero")?.parentElement || document;
     const filter = () => {
-      const q = input.value.trim().toLowerCase();
-      const lists = scope.querySelectorAll(".docs-nav, .docs-map");
-      lists.forEach(list => {
+      // Chaque mot doit commencer un mot du texte (« ram » trouve « RAM », pas « programme »).
+      const words = input.value.trim().toLowerCase().split(/\s+/).filter(Boolean)
+        .map(w => new RegExp(`(^|[^\\p{L}\\p{N}])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "u"));
+      scope.querySelectorAll(".docs-nav, .docs-map").forEach(list => {
         let shown = 0;
         list.querySelectorAll("li[data-search]").forEach(li => {
-          const ok = !q || q.split(/\s+/).every(w => li.dataset.search.includes(w));
+          const body = fullText?.get(li.dataset.slug) ?? "";
+          const ok = words.every(w => w.test(li.dataset.search) || w.test(body));
           li.hidden = !ok;
           if (ok) shown++;
         });
@@ -58,7 +68,11 @@
         if (empty) empty.hidden = shown > 0;
       });
     };
-    input.addEventListener("input", filter);
+    input.addEventListener("input", () => {
+      filter();
+      if (!fullText) loadIndex().then(filter);
+    });
+    input.addEventListener("focus", () => { loadIndex(); }, { once: true });
     input.addEventListener("keydown", e => {
       if (e.key === "Enter") {
         const first = scope.querySelector("li[data-search]:not([hidden]) a");

@@ -79,11 +79,12 @@ kbd{font-family:var(--pix);font-size:10px;padding:2px 6px;border-radius:5px;bord
 .md-doc code{font:13.5px ui-monospace,"Cascadia Code",Consolas,monospace;background:var(--panel-2);border:1px solid var(--line);padding:1px 6px;border-radius:6px;color:var(--accent-2)}
 .md-doc pre{position:relative;background:#0c1324;border:1px solid var(--line-2);border-radius:12px;padding:16px 18px;overflow:auto}
 .md-doc pre code{background:none;border:0;padding:0;color:#dfe8fb;font-size:13.5px;line-height:1.65}
-.md-doc table{width:100%;border-collapse:separate;border-spacing:0;font-size:14.5px;border:1px solid var(--line-2);border-radius:12px;overflow:hidden;display:block;overflow-x:auto}
-.md-doc th{text-align:left;font-family:var(--pix);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);background:var(--panel);font-weight:400}
+.md-doc .table-wrap{overflow-x:auto;border:1px solid var(--line-2);border-radius:12px;-webkit-overflow-scrolling:touch}
+.md-doc table{width:100%;border-collapse:collapse;font-size:14.5px}
+.md-doc th{white-space:nowrap;text-align:left;font-family:var(--pix);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);background:var(--panel);font-weight:400}
 .md-doc th,.md-doc td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
 .md-doc tr:last-child td{border-bottom:0}
-.md-doc td:first-child{color:var(--text);white-space:nowrap}
+.md-doc td:first-child{color:var(--text);min-width:150px}
 .md-doc tbody tr:hover{background:rgba(255,255,255,.02)}
 
 /* Encadrés (> [!NOTE], > [!TIP], > [!WARNING]…) */
@@ -137,5 +138,6 @@ kbd{font-family:var(--pix);font-size:10px;padding:2px 6px;border-radius:5px;bord
   .docs-mobile{display:block}
   .pager{grid-template-columns:1fr}
   .pager .next{grid-column:auto}
-  .md-doc td:first-child{white-space:normal}
+  .md-doc table{font-size:14px}
+  .md-doc th,.md-doc td{padding:9px 12px}
 }
