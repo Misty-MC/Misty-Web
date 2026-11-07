@@ -2,7 +2,7 @@
 
 use super::icons;
 use super::layout::{self, Head, Page};
-use crate::docs::{DocSet, Section};
+use crate::docs::{DocPage, DocSet, Section};
 use maud::{Markup, PreEscaped, html};
 
 /// Dépôt du site, pour le lien « Modifier cette page ».
@@ -30,7 +30,7 @@ pub fn index(p: &Page, set: &DocSet) -> Markup {
                         h2 { span.n { (format!("{:02}", Section::ALL.iter().position(|x| *x == s).unwrap() + 1)) } (s.label(tr)) }
                         ul {
                             @for d in pages {
-                                li data-search=(search_text(&d.title, &d.description)) {
+                                li data-search=(search_text(d)) data-slug=(d.slug) {
                                     a href=(format!("/docs/{}", d.slug)) {
                                         strong { (d.title) }
                                         span { (d.description) }
@@ -118,8 +118,14 @@ pub fn page(p: &Page, set: &DocSet, idx: usize) -> Markup {
     )
 }
 
-fn search_text(title: &str, description: &str) -> String {
-    format!("{title} {description}").to_lowercase()
+/// Texte cherché par la recherche de la doc : titre, description et intertitres de la page.
+fn search_text(d: &DocPage) -> String {
+    let mut s = format!("{} {}", d.title, d.description);
+    for t in &d.toc {
+        s.push(' ');
+        s.push_str(&t.text);
+    }
+    s.to_lowercase()
 }
 
 fn search_box(p: &Page) -> Markup {
@@ -143,7 +149,7 @@ fn sidebar(p: &Page, set: &DocSet, current: &str) -> Markup {
                         span.small { (s.label(tr)) }
                         ul {
                             @for d in pages {
-                                li data-search=(search_text(&d.title, &d.description)) {
+                                li data-search=(search_text(d)) data-slug=(d.slug) {
                                     a href=(format!("/docs/{}", d.slug)) aria-current=[(d.slug == current).then_some("page")] { (d.title) }
                                 }
                             }

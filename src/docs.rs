@@ -71,6 +71,8 @@ pub struct DocPage {
     pub section: Section,
     pub html: String,
     pub toc: Vec<TocEntry>,
+    /// Texte brut en minuscules, pour la recherche plein texte.
+    pub text: String,
     order: u32,
 }
 
@@ -109,6 +111,7 @@ fn parse_file(lang_dir: &str, name: &str, src: &str) -> DocPage {
         .parse()
         .unwrap_or_else(|_| panic!("{ctx} : « {num} » n'est pas un numéro"));
     let (html, toc) = markdown::render_doc(body);
+    let text = plain_text(&html);
     DocPage {
         slug: slug.to_string(),
         path: format!("docs/{lang_dir}/{name}"),
@@ -117,8 +120,34 @@ fn parse_file(lang_dir: &str, name: &str, src: &str) -> DocPage {
         section: fm.section,
         html,
         toc,
+        text,
         order,
     }
+}
+
+/// HTML → texte brut en minuscules (balises retirées, entités courantes décodées).
+fn plain_text(html: &str) -> String {
+    let mut out = String::with_capacity(html.len());
+    let mut in_tag = false;
+    for c in html.chars() {
+        match c {
+            '<' => in_tag = true,
+            '>' => {
+                in_tag = false;
+                out.push(' ');
+            }
+            _ if !in_tag => out.push(c),
+            _ => {}
+        }
+    }
+    let out = out
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&amp;", "&")
+        .to_lowercase();
+    out.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 fn load(lang_dir: &'static str) -> Option<DocSet> {
@@ -241,6 +270,17 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn plain_text_strips_tags() {
+        assert_eq!(plain_text("<p>RAM &amp; <b>Memory</b></p>"), "ram & memory");
+        let settings = get(Lang::En)
+            .pages
+            .iter()
+            .find(|p| p.slug == "settings")
+            .unwrap();
+        assert!(settings.text.contains("ram") && !settings.text.contains('<'));
     }
 
     #[test]

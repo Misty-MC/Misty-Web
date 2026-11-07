@@ -25,6 +25,9 @@ pub fn external() -> Markup {
 pub fn arrow_up() -> Markup {
     icon(r#"<path d="M12 19V5M5 12l7-7 7 7"/>"#)
 }
+pub fn menu() -> Markup {
+    icon(r#"<path d="M4 6h16M4 12h16M4 18h16"/>"#)
+}
 pub fn search() -> Markup {
     icon(r#"<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>"#)
 }

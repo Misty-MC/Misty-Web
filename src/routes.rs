@@ -132,6 +132,22 @@ pub async fn docs_page(
     )
 }
 
+/// Index de recherche plein texte de la doc, chargé par site.js à la première recherche.
+pub async fn docs_search_index(Query(q): Query<PageQuery>, headers: HeaderMap) -> Response {
+    let (lang, _) = i18n::negotiate(q.lang.as_deref(), &headers);
+    let entries: Vec<_> = docs::get(lang)
+        .pages
+        .iter()
+        .map(|p| serde_json::json!({ "slug": p.slug, "text": p.text }))
+        .collect();
+    let mut res = Json(entries).into_response();
+    res.headers_mut().insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("public, max-age=300"),
+    );
+    res
+}
+
 pub async fn not_found(
     State(state): State<Arc<AppState>>,
     uri: Uri,
