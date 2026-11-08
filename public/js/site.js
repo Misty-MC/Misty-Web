@@ -116,10 +116,33 @@
       g.fillStyle = "#1c2a4d";
       g.fillRect(1, 0, 10, 1); g.fillRect(11, 0, 10, 1);              // dessus, dessous
       g.fillRect(0, 1, 1, 16); g.fillRect(11, 1, 1, 16);              // côtés
-      fill(22, 0, 24, 22);           // élytres
-      g.fillStyle = "rgba(10,15,29,.35)";
-      for (let x = 24; x < 46; x += 3) g.fillRect(x, 2, 1, 18); // plumes
-      cloud(34, 6);
+      // Élytres (patron 64×32, région 22,0) : une vraie silhouette d'aile avec des pixels transparents,
+      // épaule arrondie et pointe arrondie en bas. Face de dos en (36,2), bord extérieur à gauche ;
+      // face de dessous en (24,2), en miroir et plus sombre.
+      const SPAN = [[2,9],[1,9],[0,9],[0,9],[0,9],[0,9],[0,9],[0,9],[0,9],[0,9],[0,9],[0,9],[0,9],[0,9],[0,8],[0,8],[0,7],[1,6],[1,5],[2,4]];
+      const MOON = ["..##.", ".#...", "#....", "#....", ".#...", "..##."];   // croissant, côté extérieur
+      const wing = (cx, y, under) => {
+        const t = y / 19, d = ((cx * 7 + y * 3) % 5) - 2;
+        let r = 24 + 62 * t + d, gg = 36 + 98 * t + d, b = 70 + 150 * t + d * 1.5;
+        const k = ((y - cx * 0.7) % 4.5 + 4.5) % 4.5;                    // plumes en diagonale
+        if (y > 5 && y < 18 && k < 1) { r += 80; gg += 82; b += 35; }
+        if (cx === 0 || (cx === SPAN[y][0] && y < 2)) { r += 45; gg += 50; b += 30; }   // liseré
+        if (MOON[y - 3]?.[cx - 1] === "#") { r = 234; gg = 241; b = 255; }
+        if (under) { r *= 0.78; gg *= 0.78; b *= 0.82; }
+        return `rgb(${Math.min(r, 245) | 0},${Math.min(gg, 248) | 0},${Math.min(b, 255) | 0})`;
+      };
+      const put = (x, y, col) => { g.fillStyle = col; g.fillRect(x, y, 1, 1); };
+      for (let y = 0; y < 20; y++) {
+        const [a, z] = SPAN[y];
+        for (let cx = a; cx <= z; cx++) {
+          put(36 + cx, 2 + y, wing(cx, y, false));      // dos
+          put(24 + 9 - cx, 2 + y, wing(cx, y, true));   // dessous
+        }
+        if (a === 0) { put(34, 2 + y, "#1a2a52"); put(35, 2 + y, "#1a2a52"); }   // tranche extérieure
+        if (z === 9) { put(22, 2 + y, "#121b33"); put(23, 2 + y, "#121b33"); }   // tranche intérieure
+      }
+      g.fillStyle = "#1a2a52"; g.fillRect(24, 0, 8, 2);   // dessus (épaule arrondie)
+      g.fillStyle = "#3e64b8"; g.fillRect(36, 0, 3, 2);   // dessous (pointe)
       return c;
     };
     const misty = mistyTexture();
@@ -161,8 +184,8 @@
       else {
         // Élytres : une aile et son reflet
         const w = c.width / 2;
-        g.drawImage(misty, 24, 2, 10, 20, 0, 0, w, c.height);
-        g.save(); g.scale(-1, 1); g.drawImage(misty, 24, 2, 10, 20, -c.width, 0, w, c.height); g.restore();
+        g.drawImage(misty, 36, 2, 10, 20, 0, 0, w, c.height);
+        g.save(); g.scale(-1, 1); g.drawImage(misty, 36, 2, 10, 20, -c.width, 0, w, c.height); g.restore();
       }
     });
 
