@@ -84,6 +84,8 @@ async fn main() {
         .route("/patch-notes", get(routes::patch_notes))
         .route("/shop", get(routes::shop))
         .route("/skin/{name}", get(routes::skin))
+        .route("/cape/{name}", get(routes::cape))
+        .route("/player/{name}", get(routes::player))
         .route("/robots.txt", get(routes::robots))
         .route("/sitemap.xml", get(routes::sitemap))
         .route("/docs", get(routes::docs_index))

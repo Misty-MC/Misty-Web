@@ -51,32 +51,43 @@
     scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
   });
 
-  // ---------- Boutique : vitrine 3D du skin ----------
+  // ---------- Boutique : studio 3D du skin (skinview3d) ----------
   const stage = document.getElementById("stage");
   if (stage && window.skinview3d) {
     const sv = window.skinview3d;
     const canvas = document.getElementById("skin3d");
-    const viewer = new sv.SkinViewer({ canvas, width: canvas.clientWidth || 360, height: canvas.clientHeight || 420, zoom: 0.62, fov: 36 });
+    const studio = stage.classList.contains("studio-stage");
+    const viewer = new sv.SkinViewer({ canvas, width: canvas.clientWidth || 360, height: canvas.clientHeight || 420, zoom: studio ? 0.72 : 0.62, fov: 36 });
     viewer.globalLight.intensity = 2.4;
     viewer.cameraLight.intensity = 0.8;
-    viewer.controls.enableZoom = false;
+    viewer.controls.enableZoom = studio;
     viewer.controls.enablePan = false;
     viewer.autoRotate = !reduce;
     viewer.autoRotateSpeed = 0.7;
-    viewer.animation = new sv.WalkingAnimation();
-    viewer.animation.speed = 0.55;
-    viewer.animation.paused = reduce;
+    const press = (buttons, active) => buttons.forEach(b => b.setAttribute("aria-pressed", String(b === active)));
 
+    // Pseudo au-dessus de la tête, comme en jeu
     const setName = name => {
       viewer.nameTag = name
         ? new sv.NameTagObject(name, { font: "48px Silkscreen", height: 2.4, margin: [4, 8, 2, 8], textStyle: "#eaf1ff", backgroundStyle: "rgba(10,15,29,.55)" })
         : null;
     };
-    const loadSkin = url => viewer.loadSkin(url).catch(() => viewer.loadSkin("/skin/MHF_Steve").catch(() => {}));
-    loadSkin(stage.dataset.skin);
-    setName(stage.dataset.name);
 
-    // Cape et élytres « Misty », dessinées en pixel art : dégradé nuit → brume et petit nuage.
+    // Animations : repos, marche, course, vol, salut, accroupi
+    const ANIMS = { idle: sv.IdleAnimation, walk: sv.WalkingAnimation, run: sv.RunningAnimation, fly: sv.FlyingAnimation, wave: sv.WaveAnimation, crouch: sv.CrouchAnimation };
+    const SPEED = { walk: 0.6, run: 0.8 };
+    const animButtons = [...stage.querySelectorAll("[data-anim]")];
+    const setAnim = key => {
+      const Anim = ANIMS[key];
+      viewer.animation = Anim ? new Anim() : null;
+      if (viewer.animation) { viewer.animation.speed = SPEED[key] ?? 1; viewer.animation.paused = reduce; }
+      press(animButtons, animButtons.find(b => b.dataset.anim === key));
+      // Voler sans rien dans le dos : on sort les élytres
+      if (key === "fly" && back.mode === "none") setBack("elytra", ownCape ? "own" : "misty");
+    };
+    animButtons.forEach(b => b.addEventListener("click", () => setAnim(b.dataset.anim)));
+
+    // Cape et élytres : la vraie cape du joueur (Mojang) ou la texture Misty
     const mistyTexture = () => {
       const c = document.createElement("canvas");
       c.width = 64; c.height = 32;
@@ -105,33 +116,119 @@
       cloud(34, 6);
       return c;
     };
-    const texture = mistyTexture();
-    stage.querySelectorAll(".try button").forEach(btn => btn.addEventListener("click", () => {
-      const back = btn.dataset.back;
-      viewer.loadCape(back === "none" ? null : texture, back === "none" ? undefined : { backEquipment: back });
-      stage.querySelectorAll(".try button").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
+    const misty = mistyTexture();
+    let ownCape = null;                       // URL de la cape du joueur, s'il en a une
+    const back = { mode: "none", source: "own" };
+    const capeBtn = stage.querySelector('[data-toggle="cape"]');
+    const elytraBtn = stage.querySelector('[data-toggle="elytra"]');
+    const tryButtons = [...document.querySelectorAll(".try-misty")];
+    const setBack = (mode, source) => {
+      back.mode = mode; back.source = source;
+      const texture = mode === "none" ? null : (source === "own" && ownCape ? ownCape : misty);
+      viewer.loadCape(texture, texture ? { backEquipment: mode } : undefined);
+      capeBtn?.setAttribute("aria-pressed", String(mode === "cape" && source === "own" && !!ownCape));
+      elytraBtn?.setAttribute("aria-pressed", String(mode === "elytra"));
+      tryButtons.forEach(b => b.setAttribute("aria-pressed", String(source === "misty" && b.dataset.back === mode)));
+    };
+    capeBtn?.addEventListener("click", () => setBack(back.mode === "cape" && back.source === "own" ? "none" : "cape", "own"));
+    elytraBtn?.addEventListener("click", () => {
+      if (back.mode === "elytra") setBack(ownCape ? "cape" : "none", "own");
+      else setBack("elytra", ownCape && back.source === "own" ? "own" : "misty");
+    });
+    tryButtons.forEach(b => b.addEventListener("click", () => {
+      const on = back.mode === b.dataset.back && back.source === "misty";
+      setBack(on ? (ownCape ? "cape" : "none") : b.dataset.back, on ? "own" : "misty");
     }));
 
-    // Taille du rendu = taille affichée ; pas de rendu quand la vitrine est hors de l'écran.
+    // Vues face / profil / dos (la rotation automatique s'arrête)
+    const rotateBtn = stage.querySelector('[data-toggle="rotate"]');
+    const viewButtons = [...stage.querySelectorAll("[data-view]")];
+    const ANGLE = { front: 0, side: Math.PI / 2, back: Math.PI };
+    let tween = 0;
+    const setView = key => {
+      viewer.autoRotate = false;
+      rotateBtn?.setAttribute("aria-pressed", "false");
+      viewer.resetCameraPose();   // caméra à sa distance d'origine (zoom et orbite annulés)
+      viewer.controls.update();
+      const wrap = viewer.playerWrapper, from = ((wrap.rotation.y % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      let to = ANGLE[key];
+      if (to - from > Math.PI) to -= 2 * Math.PI; else if (from - to > Math.PI) to += 2 * Math.PI;
+      const t0 = performance.now(), dur = reduce ? 0 : 450;
+      cancelAnimationFrame(tween);
+      const step = now => {
+        const k = dur ? Math.min(1, (now - t0) / dur) : 1, e = 1 - Math.pow(1 - k, 3);
+        wrap.rotation.y = from + (to - from) * e;
+        if (k < 1) tween = requestAnimationFrame(step);
+      };
+      tween = requestAnimationFrame(step);
+      press(viewButtons, viewButtons.find(b => b.dataset.view === key));
+    };
+    viewButtons.forEach(b => b.addEventListener("click", () => setView(b.dataset.view)));
+    rotateBtn?.addEventListener("click", () => {
+      viewer.autoRotate = !viewer.autoRotate;
+      rotateBtn.setAttribute("aria-pressed", String(viewer.autoRotate));
+      if (viewer.autoRotate) press(viewButtons, null);
+    });
+
+    // Charge le joueur : infos (pseudo exact, UUID, bras fins, cape) puis skin en 3D
+    const loadPlayer = async name => {
+      let info = null;
+      if (name) {
+        const res = await fetch(`/player/${name}`).catch(() => null);
+        if (res?.ok) info = await res.json();
+        else if (studio && res?.status === 404) document.getElementById("pmissing").hidden = false;
+      }
+      const skin = name ? `/skin/${name}` : `/skin/${stage.dataset.skin}`;
+      const model = info ? (info.slim ? "slim" : "default") : "auto-detect";
+      await viewer.loadSkin(skin, { model }).catch(() => viewer.loadSkin("/skin/MHF_Steve").catch(() => {}));
+      setName(info?.name ?? name);
+      ownCape = info?.cape ? `/cape/${info.name}` : null;
+      if (capeBtn) capeBtn.disabled = !ownCape;
+      setBack(ownCape ? "cape" : "none", "own");   // comme NameMC : la vraie cape est portée d'office
+      if (studio && info) {
+        document.getElementById("pname").textContent = info.name;
+        const chip = document.getElementById("pmodel");
+        chip.textContent = info.slim ? chip.dataset.slim : chip.dataset.classic;
+        const uuid = document.getElementById("puuid");
+        if (info.uuid) { uuid.querySelector("code").textContent = info.uuid; uuid.hidden = false; }
+      }
+    };
+    setAnim("walk");
+    loadPlayer(stage.dataset.name).finally(() => stage.classList.add("ready"));
+
+    // Copier l'UUID
+    const uuidBtn = document.getElementById("puuid");
+    uuidBtn?.addEventListener("click", () => {
+      navigator.clipboard?.writeText(uuidBtn.querySelector("code").textContent).then(() => {
+        const old = uuidBtn.title; uuidBtn.title = uuidBtn.dataset.copied; uuidBtn.classList.add("done");
+        setTimeout(() => { uuidBtn.title = old; uuidBtn.classList.remove("done"); }, 1400);
+      });
+    });
+
+    // Onglets des catégories de cosmétiques
+    const tabs = [...document.querySelectorAll(".cat-tabs [role=tab]")];
+    tabs.forEach(tab => tab.addEventListener("click", () => {
+      tabs.forEach(t => t.setAttribute("aria-selected", String(t === tab)));
+      document.querySelectorAll(".cat-panel").forEach(panel => { panel.hidden = panel.id !== tab.getAttribute("aria-controls"); });
+    }));
+
+    // Taille du rendu = taille affichée ; pas de rendu quand l'aperçu est hors de l'écran.
     const resize = () => { viewer.width = canvas.clientWidth; viewer.height = canvas.clientHeight; };
     if ("ResizeObserver" in window) new ResizeObserver(resize).observe(canvas);
     if ("IntersectionObserver" in window) {
       new IntersectionObserver(([e]) => { viewer.renderPaused = !e.isIntersecting; }).observe(stage);
     }
 
-    // Aperçu en direct pendant qu'on tape son pseudo
+    // Aperçu en direct pendant qu'on tape son pseudo (formulaire)
     const input = document.getElementById("player");
     let timer;
     input?.addEventListener("input", () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
         const name = input.value.trim();
-        if (!/^[A-Za-z0-9_]{3,16}$/.test(name)) return;
-        loadSkin(`/skin/${name}`);
-        setName(name);
+        if (/^[A-Za-z0-9_]{3,16}$/.test(name)) loadPlayer(name);
       }, 450);
     });
-    stage.classList.add("ready");
   }
 
   // ---------- Documentation ----------

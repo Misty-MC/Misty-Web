@@ -24,7 +24,9 @@ Rendered server-side in Rust: pages, translations, patch notes and the pixel-art
 ```
 src/
 ├── main.rs            startup, routes, static files
-├── routes.rs          pages, /docs, /api/latest, /download/*
+├── routes.rs          pages, /docs, /shop, /api/latest, /download/*, /skin, /cape, /player
+├── skins.rs           Minecraft profiles for the shop (Mojang API, mc-heads.net fallback)
+├── seo.rs             JSON-LD, robots.txt, sitemap.xml
 ├── docs.rs            documentation pages (docs/<lang>/NN-slug.md)
 ├── github.rs          GitHub releases + cache
 ├── i18n.rs            language negotiation and translations
