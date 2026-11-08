@@ -108,8 +108,14 @@
         }));
         g.fillStyle = "#cfe0ff"; g.fillRect(ox, oy + 6, 6, 1); g.fillRect(ox + 4, oy + 8, 4, 1);
       };
-      fill(0, 0, 22, 17);            // cape (toutes les faces)
-      cloud(2, 5); cloud(12, 5);     // nuage dos et face
+      // Cape (patron 64×32) : face extérieure (1,1) en dégradé avec un nuage ; face intérieure (12,1)
+      // et tranches en bleu nuit uni, pour qu'elle se lise comme une étoffe fine et non comme un bloc.
+      fill(1, 1, 10, 16);
+      cloud(2, 5);
+      g.fillStyle = "#121b33"; g.fillRect(12, 1, 10, 16);            // intérieur
+      g.fillStyle = "#1c2a4d";
+      g.fillRect(1, 0, 10, 1); g.fillRect(11, 0, 10, 1);              // dessus, dessous
+      g.fillRect(0, 1, 1, 16); g.fillRect(11, 1, 1, 16);              // côtés
       fill(22, 0, 24, 22);           // élytres
       g.fillStyle = "rgba(10,15,29,.35)";
       for (let x = 24; x < 46; x += 3) g.fillRect(x, 2, 1, 18); // plumes
@@ -121,24 +127,44 @@
     const back = { mode: "none", source: "own" };
     const capeBtn = stage.querySelector('[data-toggle="cape"]');
     const elytraBtn = stage.querySelector('[data-toggle="elytra"]');
-    const tryButtons = [...document.querySelectorAll(".try-misty")];
+    const equipButtons = [...document.querySelectorAll(".equip")];
     const setBack = (mode, source) => {
       back.mode = mode; back.source = source;
       const texture = mode === "none" ? null : (source === "own" && ownCape ? ownCape : misty);
       viewer.loadCape(texture, texture ? { backEquipment: mode } : undefined);
       capeBtn?.setAttribute("aria-pressed", String(mode === "cape" && source === "own" && !!ownCape));
       elytraBtn?.setAttribute("aria-pressed", String(mode === "elytra"));
-      tryButtons.forEach(b => b.setAttribute("aria-pressed", String(source === "misty" && b.dataset.back === mode)));
+      equipButtons.forEach(b => {
+        const on = source === "misty" && b.dataset.back === mode;
+        b.setAttribute("aria-pressed", String(on));
+        b.textContent = on ? b.dataset.unequip : b.dataset.equip;
+        b.closest(".item")?.classList.toggle("equipped", on);
+        // Avertissement : ce cosmétique ne s'affiche pas encore en jeu
+        const warn = b.closest(".cat-panel")?.querySelector(".equip-warn");
+        if (warn) warn.hidden = !on;
+      });
     };
     capeBtn?.addEventListener("click", () => setBack(back.mode === "cape" && back.source === "own" ? "none" : "cape", "own"));
     elytraBtn?.addEventListener("click", () => {
       if (back.mode === "elytra") setBack(ownCape ? "cape" : "none", "own");
       else setBack("elytra", ownCape && back.source === "own" ? "own" : "misty");
     });
-    tryButtons.forEach(b => b.addEventListener("click", () => {
+    equipButtons.forEach(b => b.addEventListener("click", () => {
       const on = back.mode === b.dataset.back && back.source === "misty";
       setBack(on ? (ownCape ? "cape" : "none") : b.dataset.back, on ? "own" : "misty");
     }));
+    // Vignettes des articles Misty, dessinées depuis la texture
+    document.querySelectorAll("canvas.thumb").forEach(c => {
+      const g = c.getContext("2d");
+      g.imageSmoothingEnabled = false;
+      if (c.dataset.thumb === "cape") g.drawImage(misty, 1, 1, 10, 16, 0, 0, c.width, c.height);
+      else {
+        // Élytres : une aile et son reflet
+        const w = c.width / 2;
+        g.drawImage(misty, 24, 2, 10, 20, 0, 0, w, c.height);
+        g.save(); g.scale(-1, 1); g.drawImage(misty, 24, 2, 10, 20, -c.width, 0, w, c.height); g.restore();
+      }
+    });
 
     // Vues face / profil / dos (la rotation automatique s'arrête)
     const rotateBtn = stage.querySelector('[data-toggle="rotate"]');

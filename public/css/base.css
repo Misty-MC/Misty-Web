@@ -7,7 +7,7 @@
   --line:rgba(255,255,255,.08);--line-2:rgba(255,255,255,.15);
   --text:#eef3ff;--muted:#a3b0cb;--dim:#6f7c99;
   --accent:#9cc0ff;--accent-2:#cfe0ff;--accent-strong:#6f9cff;
-  --green:#25d46c;--green-d:#139a4c;
+  --green:#7aa8ff;--green-d:#3d63c4;
   --r:16px;
   --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --pix:Silkscreen,ui-monospace,monospace;
@@ -52,8 +52,8 @@ button{font:inherit;color:inherit}
   padding:13px 20px;border-radius:12px;border:1px solid transparent;cursor:pointer;white-space:nowrap;
   transition:transform .12s,box-shadow .12s,background .15s,border-color .15s;
 }
-.btn.play{background:linear-gradient(180deg,#3ee584,var(--green));color:#062614;box-shadow:0 4px 0 var(--green-d),0 12px 28px -10px rgba(37,212,108,.6)}
-.btn.play:hover{transform:translateY(-2px);box-shadow:0 6px 0 var(--green-d),0 16px 32px -10px rgba(37,212,108,.7)}
+.btn.play{background:linear-gradient(180deg,#b4cfff,var(--green));color:#0a1633;box-shadow:0 4px 0 var(--green-d),0 12px 28px -10px rgba(122,168,255,.6)}
+.btn.play:hover{transform:translateY(-2px);box-shadow:0 6px 0 var(--green-d),0 16px 32px -10px rgba(122,168,255,.7)}
 .btn.play:active{transform:translateY(3px);box-shadow:0 1px 0 var(--green-d)}
 .btn.ghost{background:var(--panel);border-color:var(--line-2);color:var(--text);box-shadow:0 4px 0 #070b16}
 .btn.ghost:hover{transform:translateY(-2px);background:var(--panel-2);box-shadow:0 6px 0 #070b16}
