@@ -56,6 +56,7 @@ fn page<'a>(state: &'a AppState, lang: Lang, path: &'a str, count: Option<usize>
         repo: state.github.repo(),
         fog: &state.fog_strip,
         scene: &state.scene,
+        site_url: &state.site_url,
     }
 }
 
@@ -181,6 +182,29 @@ pub async fn shop(
             res.headers_mut().append(header::SET_COOKIE, v);
         }
     }
+    res
+}
+
+pub async fn robots(State(state): State<Arc<AppState>>) -> Response {
+    let mut res = crate::seo::robots_txt(&state.site_url).into_response();
+    res.headers_mut().insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("text/plain; charset=utf-8"),
+    );
+    res
+}
+
+pub async fn sitemap(State(state): State<Arc<AppState>>) -> Response {
+    let mut res = crate::seo::sitemap_xml(&state.site_url).into_response();
+    let h = res.headers_mut();
+    h.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("application/xml; charset=utf-8"),
+    );
+    h.insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("public, max-age=3600"),
+    );
     res
 }
 

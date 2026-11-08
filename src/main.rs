@@ -5,6 +5,7 @@
 //! - `GITHUB_TOKEN` (facultatif) : évite la limite de l'API GitHub
 //! - `MISTY_REPO` (`Misty-MC/Misty` par défaut) : dépôt dont on affiche les releases
 //! - `MISTY_PUBLIC_DIR` (`public` par défaut) : fichiers statiques (CSS, JS, images, polices)
+//! - `SITE_URL` (`https://misty-launcher.online` par défaut) : adresse publique, pour le référencement
 //! - `GITHUB_API` (`https://api.github.com` par défaut) : utile pour tester avec une fausse API
 
 mod docs;
@@ -14,6 +15,7 @@ mod i18n;
 mod markdown;
 mod routes;
 mod scene;
+mod seo;
 mod views;
 
 use axum::Router;
@@ -28,6 +30,8 @@ pub struct AppState {
     pub github: github::GitHub,
     /// Paysage de fond, le même sur toutes les pages.
     pub scene: String,
+    /// Adresse publique du site, sans `/` final.
+    pub site_url: String,
     /// Bande de brume pixel, insérée entre les sections.
     pub fog_strip: String,
 }
@@ -56,6 +60,9 @@ async fn main() {
             moon_r: 44,
         }),
         fog_strip: scene::fog_strip(11),
+        site_url: env_or("SITE_URL", "https://misty-launcher.online")
+            .trim_end_matches('/')
+            .to_string(),
     });
 
     let static_files = ServeDir::new(env_or("MISTY_PUBLIC_DIR", "public"))
@@ -71,6 +78,8 @@ async fn main() {
         .route("/", get(routes::index))
         .route("/patch-notes", get(routes::patch_notes))
         .route("/shop", get(routes::shop))
+        .route("/robots.txt", get(routes::robots))
+        .route("/sitemap.xml", get(routes::sitemap))
         .route("/docs", get(routes::docs_index))
         .route("/docs/search.json", get(routes::docs_search_index))
         .route("/docs/{slug}", get(routes::docs_page))

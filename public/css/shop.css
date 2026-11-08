@@ -55,3 +55,51 @@
   .field .btn{width:100%}
   .shop-card{flex-direction:column}
 }
+
+/* ---------- Le joueur qui se promène dans la forêt ----------
+   Le personnage est assemblé avec les faces « profil droit » du skin (64×64) :
+   tête (0,8) + chapeau (32,8), corps (16,20), bras (40,20), jambe (0,20). */
+.walker-track{
+  --px:4px;--ground:170px;
+  position:absolute;left:0;right:0;top:calc(clamp(680px,100vh,940px) - 64px - var(--ground));height:190px;
+  overflow:hidden;pointer-events:none;z-index:2;
+}
+.walker{position:absolute;left:0;bottom:24px;width:calc(8*var(--px));height:calc(32*var(--px));pointer-events:auto;cursor:pointer;animation:walk 48s linear infinite}
+.walker::before{
+  content:"";position:absolute;left:50%;top:55%;width:220px;height:220px;transform:translate(-50%,-50%);pointer-events:none;
+  background:radial-gradient(closest-side,rgba(255,206,140,.2),rgba(255,206,140,.06) 55%,transparent);animation:lantern 2.4s ease-in-out infinite alternate;
+}
+.walker .flip{position:absolute;inset:0;animation:flip 48s linear infinite}
+.walker .figure{position:absolute;inset:0;animation:bob .35s ease-in-out infinite alternate}
+.walker.jump .figure{animation:jump .55s cubic-bezier(.3,.7,.4,1)}
+.walker .part,.walker .hat{
+  position:absolute;background-image:var(--skin);background-repeat:no-repeat;
+  background-size:calc(64*var(--px)) auto;image-rendering:pixelated;
+}
+.walker .head{left:0;top:0;width:calc(8*var(--px));height:calc(8*var(--px));background-position:0 calc(-8*var(--px))}
+.walker .hat{inset:0;background-position:calc(-32*var(--px)) calc(-8*var(--px))}
+.walker .body{left:calc(2*var(--px));top:calc(8*var(--px));width:calc(4*var(--px));height:calc(12*var(--px));background-position:calc(-16*var(--px)) calc(-20*var(--px))}
+.walker .arm{left:calc(2*var(--px));top:calc(8*var(--px));width:calc(4*var(--px));height:calc(12*var(--px));background-position:calc(-40*var(--px)) calc(-20*var(--px));transform-origin:50% calc(2*var(--px))}
+.walker .leg{left:calc(2*var(--px));top:calc(20*var(--px));width:calc(4*var(--px));height:calc(12*var(--px));background-position:0 calc(-20*var(--px));transform-origin:50% 0}
+.walker .back{filter:brightness(.55)}
+.walker .leg.front,.walker .arm.back{animation:swing .7s ease-in-out infinite}
+.walker .leg.back,.walker .arm.front{animation:swing .7s ease-in-out infinite;animation-delay:-.35s}
+.walker .nametag{
+  position:absolute;left:50%;bottom:calc(32*var(--px) + 10px);transform:translateX(-50%);white-space:nowrap;
+  font:11px var(--pix);color:#fff;background:rgba(0,0,0,.45);padding:3px 6px 2px;border-radius:2px;
+}
+.walker .shadow{position:absolute;left:50%;bottom:-5px;width:44px;height:10px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.55),transparent)}
+@keyframes walk{
+  0%{transform:translateX(-80px)}
+  46%{transform:translateX(calc(100vw + 40px))}
+  50%{transform:translateX(calc(100vw + 40px))}
+  96%{transform:translateX(-80px)}
+  100%{transform:translateX(-80px)}
+}
+@keyframes flip{0%,47.9%{transform:scaleX(1)}48%,97.9%{transform:scaleX(-1)}98%,100%{transform:scaleX(1)}}
+@keyframes swing{0%,100%{transform:rotate(28deg)}50%{transform:rotate(-28deg)}}
+@keyframes bob{to{transform:translateY(-2px)}}
+@keyframes jump{0%{transform:translateY(0)}40%{transform:translateY(-44px)}70%{transform:translateY(0)}85%{transform:translateY(-6px)}100%{transform:translateY(0)}}
+@keyframes lantern{from{opacity:.7}to{opacity:1}}
+@media (max-width:600px){.walker-track{--px:3px;--ground:160px}}
+@media (prefers-reduced-motion:reduce){.walker{left:12%}}

@@ -1,12 +1,13 @@
 # Русский — все ключи обязательны (проверяется `cargo test`).
 code = "ru"
 lang_name = "Русский"
-title = "Misty – лаунчер для Minecraft"
-description = "Misty — лёгкий лаунчер для Minecraft, написанный на Rust: профили, моды из Modrinth и CurseForge, модпаки, все загрузчики модов."
+title = "Misty MC – бесплатный и лёгкий лаунчер Minecraft на Rust"
+description = "Misty (Misty MC) — бесплатный и лёгкий лаунчер Minecraft для Windows, написанный на Rust: все версии, Forge, NeoForge, Fabric, OptiFine, моды и модпаки из Modrinth и CurseForge, скины и плащи."
 date_order = "dmy"
 months = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
 decimal_sep = ","
 mb = "МБ"
+og_locale = "ru_RU"
 
 nav_features = "Возможности"
 nav_loaders = "Совместимость"
@@ -96,7 +97,7 @@ a5 = "Forge, NeoForge, Fabric, OptiFine и LiteLoader. Misty предлагае�
 cta_title = "Готовы играть?"
 cta_text = "Скачайте Misty и начните следующую игру в пару кликов."
 
-ft_tag = "Лёгкий, быстрый и элегантный лаунчер для Minecraft."
+ft_tag = "Misty MC — лёгкий, быстрый и элегантный лаунчер для Minecraft."
 ft_nav = "Навигация"
 ft_about_t = "О проекте"
 ft_about_p = "Misty — независимый лаунчер. Он не содержит файлов Minecraft: игра скачивается с официальных серверов Mojang при первом запуске."
@@ -104,7 +105,7 @@ ft_disclaimer = "Misty не связан с Mojang Studios и Microsoft. Minecra
 ft_made = "Сделано на Rust — от сервера до лаунчера."
 ft_top = "Наверх"
 
-pn_title = "Список изменений – Misty"
+pn_title = "Список изменений – Misty MC"
 pn_label = "Список изменений"
 pn_h1_1 = "Каждая версия —"
 pn_h1_2 = "сразу после выхода."
@@ -122,13 +123,13 @@ pn_files = "Файлы"
 pn_view_github = "Открыть на GitHub"
 pn_unavailable = "Сейчас не удаётся получить версии с GitHub. Попробуйте через несколько минут."
 
-nf_title = "Страница не найдена"
+nf_title = "Страница не найдена – Misty MC"
 nf_text = "Эта страница потерялась в тумане."
 nf_back = "На главную"
 
 # Documentation
 nav_docs = "Документация"
-docs_title = "Документация – Misty"
+docs_title = "Документация – Misty MC"
 docs_label = "Документация"
 docs_h1_1 = "Всё о Misty —"
 docs_h1_2 = "шаг за шагом."
@@ -150,7 +151,7 @@ docs_sec_dev = "Разработка"
 
 # Boutique
 nav_shop = "Магазин"
-shop_title = "Магазин – Misty"
+shop_title = "Магазин – Misty MC"
 shop_label = "Магазин"
 shop_h1_1 = "Косметика,"
 shop_h1_2 = "чтобы выделиться в игре."

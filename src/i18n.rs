@@ -53,6 +53,7 @@ pub struct Tr {
     pub months: [String; 12],
     pub decimal_sep: String,
     pub mb: String,
+    pub og_locale: String,
     pub nav_features: String,
     pub nav_loaders: String,
     pub nav_faq: String,

@@ -69,6 +69,8 @@ pub fn render(p: &Page, releases: Option<&[Release]>, filter: Filter) -> Markup 
         p,
         Head {
             title: &tr.pn_title,
+            description: &tr.pn_sub,
+            jsonld: None,
             css: &["home", "patch-notes"],
             body_class: "notes",
         },
