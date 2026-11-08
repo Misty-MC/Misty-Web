@@ -17,7 +17,14 @@ Rendered server-side in Rust: pages, translations, patch notes and the pixel-art
 
 [**Website**](https://misty-launcher.online/) · [**Docs**](https://misty-launcher.online/docs) · [**Patch notes**](https://misty-launcher.online/patch-notes) · [**Launcher**](https://github.com/Misty-MC/Misty) · [**Releases**](https://github.com/Misty-MC/Misty/releases)
 
+<img src="public/assets/screens/en/home.png" alt="Misty launcher, shown on the website" width="800" />
+
 </div>
+
+## 🖼️ Launcher screenshots
+
+The screenshots shown on the site live in `public/assets/screens/<lang>/` (`en` and `fr`, 1180 × 720): `home`, `profiles`, `textures` (site gallery) and `settings` (READMEs).
+They are taken by the launcher itself (`MISTY_CAPTURE`, debug build), on a demo data folder (`MISTY_DATA_DIR`).
 
 ## 🗂️ Project structure
 
