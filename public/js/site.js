@@ -210,21 +210,28 @@
       if (viewer.autoRotate) press(viewButtons, null);
     });
 
+    const input = document.getElementById("player");   // champ du pseudo (formulaire), s'il y en a un
+
     // Charge le joueur : infos (pseudo exact, UUID, bras fins, cape) puis skin en 3D
-    const loadPlayer = async name => {
+    // `fresh` : bouton « Actualiser », on ignore les caches (serveur et navigateur).
+    const loadPlayer = async (name, fresh = false) => {
       let info = null;
+      const bust = fresh ? `?t=${Date.now()}` : "";
       if (name) {
-        const res = await fetch(`/player/${name}`).catch(() => null);
+        const res = await fetch(`/player/${name}${fresh ? "?fresh=1" : ""}`, fresh ? { cache: "no-store" } : {}).catch(() => null);
         if (res?.ok) info = await res.json();
         else if (studio && res?.status === 404) document.getElementById("pmissing").hidden = false;
       }
-      const skin = name ? `/skin/${name}` : `/skin/${stage.dataset.skin}`;
+      const skin = (name ? `/skin/${name}` : `/skin/${stage.dataset.skin}`) + bust;
       const model = info ? (info.slim ? "slim" : "default") : "auto-detect";
       await viewer.loadSkin(skin, { model }).catch(() => viewer.loadSkin("/skin/MHF_Steve").catch(() => {}));
       setName(info?.name ?? name);
-      ownCape = info?.cape ? `/cape/${info.name}` : null;
+      ownCape = info?.cape ? `/cape/${info.name}${bust}` : null;
       if (capeBtn) capeBtn.disabled = !ownCape;
-      setBack(ownCape ? "cape" : "none", "own");   // comme NameMC : la vraie cape est portée d'office
+      // Comme NameMC : la vraie cape est portée d'office. Lors d'un rafraîchissement, on garde
+      // un cosmétique Misty équipé.
+      if (fresh && back.source === "misty") setBack(back.mode, "misty");
+      else setBack(ownCape ? "cape" : "none", "own");
       if (studio && info) {
         document.getElementById("pname").textContent = info.name;
         const chip = document.getElementById("pmodel");
@@ -235,6 +242,15 @@
     };
     setAnim("walk");
     loadPlayer(stage.dataset.name).finally(() => stage.classList.add("ready"));
+
+    // Actualiser : recharge le skin et la cape (après un changement chez Mojang)
+    const reloadBtn = document.getElementById("reload");
+    reloadBtn?.addEventListener("click", () => {
+      if (reloadBtn.classList.contains("busy")) return;
+      const name = input?.value.trim().match(/^[A-Za-z0-9_]{3,16}$/)?.[0] || stage.dataset.name;
+      reloadBtn.classList.add("busy");
+      loadPlayer(name, true).finally(() => setTimeout(() => reloadBtn.classList.remove("busy"), 400));
+    });
 
     // Copier l'UUID
     const uuidBtn = document.getElementById("puuid");
@@ -260,7 +276,6 @@
     }
 
     // Aperçu en direct pendant qu'on tape son pseudo (formulaire)
-    const input = document.getElementById("player");
     let timer;
     input?.addEventListener("input", () => {
       clearTimeout(timer);

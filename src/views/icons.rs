@@ -61,6 +61,10 @@ pub fn copy() -> Markup {
 pub fn alert() -> Markup {
     icon(r#"<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/>"#)
 }
+/// Rotation automatique : orbite autour du joueur.
+pub fn orbit() -> Markup {
+    icon(r#"<ellipse cx="12" cy="12" rx="10" ry="4"/><path d="M12 8v8"/><path d="M19 7l2 1-1 2"/>"#)
+}
 pub fn menu() -> Markup {
     icon(r#"<path d="M4 6h16M4 12h16M4 18h16"/>"#)
 }

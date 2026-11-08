@@ -157,7 +157,10 @@ fn stage(p: &Page, skin: &str, name: Option<&str>, studio: bool) -> Markup {
                     button type="button" data-view="side" aria-pressed="false" { (tr.shop_view_side) }
                     button type="button" data-view="back" aria-pressed="false" { (tr.shop_view_back) }
                 }
-                button.toggle type="button" data-toggle="rotate" aria-pressed="true" { (icons::refresh()) span { (tr.shop_rotate) } }
+                div.toggles {
+                    button.toggle #reload type="button" title=(tr.shop_reload_hint) aria-label=(tr.shop_reload_hint) { (icons::refresh()) span { (tr.shop_reload) } }
+                    button.toggle type="button" data-toggle="rotate" aria-pressed="true" { (icons::orbit()) span { (tr.shop_rotate) } }
+                }
             }
             div.halo aria-hidden="true" {}
             div.circle aria-hidden="true" { span {} span {} span {} }

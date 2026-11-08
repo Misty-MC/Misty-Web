@@ -17,6 +17,8 @@ use tokio::sync::Mutex;
 
 const TTL: Duration = Duration::from_secs(600);
 const TTL_MISSING: Duration = Duration::from_secs(120);
+/// Délai minimal entre deux rechargements forcés d'un même joueur (bouton « Actualiser »).
+const MIN_REFRESH: Duration = Duration::from_secs(20);
 const MAX_ENTRIES: usize = 256;
 /// Un skin ou une cape fait quelques Ko ; au-delà, ce n'est pas une texture.
 const MAX_BYTES: usize = 512 * 1024;
@@ -113,7 +115,9 @@ impl Skins {
     }
 
     /// Profil de `name` (pseudo déjà validé : 3 à 16 caractères `[A-Za-z0-9_]`).
-    pub async fn lookup(&self, http: &reqwest::Client, name: &str) -> Lookup {
+    /// `fresh` ignore le cache (au plus une fois toutes les 20 s par joueur), pour voir tout de
+    /// suite un skin ou une cape qui vient de changer.
+    pub async fn lookup(&self, http: &reqwest::Client, name: &str, fresh: bool) -> Lookup {
         let key = name.to_ascii_lowercase();
         if let Some((at, found)) = self.cache.lock().await.get(&key) {
             let ttl = if matches!(found, Lookup::Found(_)) {
@@ -121,6 +125,7 @@ impl Skins {
             } else {
                 TTL_MISSING
             };
+            let ttl = if fresh { MIN_REFRESH } else { ttl };
             if at.elapsed() < ttl {
                 return found.clone();
             }

@@ -218,6 +218,8 @@ pub struct Tr {
     pub shop_own_cape: String,
     pub shop_elytra: String,
     pub shop_rotate: String,
+    pub shop_reload: String,
+    pub shop_reload_hint: String,
     pub shop_model_classic: String,
     pub shop_model_slim: String,
     pub shop_copy_uuid: String,
