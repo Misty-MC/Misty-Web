@@ -197,12 +197,16 @@ fn texture_response(png: axum::body::Bytes) -> Response {
     res
 }
 
-async fn lookup_player(state: &AppState, name: &str) -> Result<Arc<skins::Profile>, Response> {
+async fn lookup_player(
+    state: &AppState,
+    name: &str,
+    fresh: bool,
+) -> Result<Arc<skins::Profile>, Response> {
     let name = name.strip_suffix(".png").unwrap_or(name);
     if !shop::valid_username(name) {
         return Err((StatusCode::NOT_FOUND, "Pseudo invalide").into_response());
     }
-    match state.skins.lookup(state.github.http(), name).await {
+    match state.skins.lookup(state.github.http(), name, fresh).await {
         skins::Lookup::Found(p) => Ok(p),
         skins::Lookup::NotFound => {
             Err((StatusCode::NOT_FOUND, "Joueur introuvable").into_response())
@@ -216,7 +220,7 @@ async fn lookup_player(state: &AppState, name: &str) -> Result<Arc<skins::Profil
 /// `/skin/<pseudo>` (ou `/skin/<pseudo>.png`) : le skin du joueur, relayé depuis le site
 /// pour que l'aperçu 3D puisse le lire.
 pub async fn skin(State(state): State<Arc<AppState>>, Path(name): Path<String>) -> Response {
-    match lookup_player(&state, &name).await {
+    match lookup_player(&state, &name, false).await {
         Ok(p) => texture_response(p.skin.clone()),
         Err(res) => res,
     }
@@ -224,7 +228,7 @@ pub async fn skin(State(state): State<Arc<AppState>>, Path(name): Path<String>) 
 
 /// `/cape/<pseudo>` : la cape Mojang du joueur, s'il en a une.
 pub async fn cape(State(state): State<Arc<AppState>>, Path(name): Path<String>) -> Response {
-    match lookup_player(&state, &name).await {
+    match lookup_player(&state, &name, false).await {
         Ok(p) => match &p.cape {
             Some(cape) => texture_response(cape.clone()),
             None => (StatusCode::NOT_FOUND, "Pas de cape").into_response(),
@@ -233,9 +237,20 @@ pub async fn cape(State(state): State<Arc<AppState>>, Path(name): Path<String>) 
     }
 }
 
+#[derive(Deserialize)]
+pub struct PlayerQuery {
+    /// `?fresh=1` : recharge le profil chez Mojang au lieu d'utiliser le cache.
+    fresh: Option<String>,
+}
+
 /// `/player/<pseudo>` : pseudo exact, UUID, modèle de bras et présence d'une cape (JSON).
-pub async fn player(State(state): State<Arc<AppState>>, Path(name): Path<String>) -> Response {
-    match lookup_player(&state, &name).await {
+pub async fn player(
+    State(state): State<Arc<AppState>>,
+    Path(name): Path<String>,
+    Query(q): Query<PlayerQuery>,
+) -> Response {
+    let fresh = q.fresh.is_some();
+    match lookup_player(&state, &name, fresh).await {
         Ok(p) => {
             let mut res = Json(serde_json::json!({
                 "name": p.name,
