@@ -1,6 +1,7 @@
 /* Boutique (chargée après home.css et patch-notes.css, dont elle réutilise le hero). */
 
-.shop-hero .pn-copy{max-width:640px}
+.shop-hero .pn-copy{max-width:600px}
+.shop-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:clamp(24px,4vw,56px);align-items:center}
 .shop-hero .tags .ic{color:var(--accent)}
 
 /* Formulaire du pseudo */
@@ -56,50 +57,67 @@
   .shop-card{flex-direction:column}
 }
 
-/* ---------- Le joueur qui se promène dans la forêt ----------
-   Le personnage est assemblé avec les faces « profil droit » du skin (64×64) :
-   tête (0,8) + chapeau (32,8), corps (16,20), bras (40,20), jambe (0,20). */
-.walker-track{
-  --px:4px;--ground:170px;
-  position:absolute;left:0;right:0;top:calc(clamp(680px,100vh,940px) - 64px - var(--ground));height:190px;
-  overflow:hidden;pointer-events:none;z-index:2;
+/* ---------- Vitrine 3D ----------
+   Le skin en 3D (skinview3d) sur un cercle de lumière, halo de lune derrière, lucioles. */
+.stage{position:relative;height:clamp(440px,52vw,560px);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;isolation:isolate;overflow:hidden}
+.stage canvas{position:absolute;inset:36px 0 70px;width:100%!important;height:calc(100% - 106px)!important;cursor:grab;z-index:2;outline:none}
+.stage canvas:active{cursor:grabbing}
+.stage-label{
+  position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:3;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
+  font-family:var(--pix);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);
+  padding:6px 11px;border-radius:999px;background:rgba(10,15,29,.55);border:1px solid var(--line-2);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
 }
-.walker{position:absolute;left:0;bottom:24px;width:calc(8*var(--px));height:calc(32*var(--px));pointer-events:auto;cursor:pointer;animation:walk 48s linear infinite}
-.walker::before{
-  content:"";position:absolute;left:50%;top:55%;width:220px;height:220px;transform:translate(-50%,-50%);pointer-events:none;
-  background:radial-gradient(closest-side,rgba(255,206,140,.2),rgba(255,206,140,.06) 55%,transparent);animation:lantern 2.4s ease-in-out infinite alternate;
+.stage-label .ic{width:14px;height:14px}
+
+/* Halo de lune derrière le joueur */
+.halo{position:absolute;left:50%;top:44%;width:min(420px,90%);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;z-index:0;
+  background:radial-gradient(closest-side,rgba(207,224,255,.32),rgba(111,156,255,.14) 45%,rgba(111,156,255,.04) 70%,transparent);
+  animation:halo 6s ease-in-out infinite alternate}
+@keyframes halo{from{opacity:.75;transform:translate(-50%,-50%) scale(.94)}to{opacity:1;transform:translate(-50%,-50%) scale(1.05)}}
+
+/* Cercle runique au sol (trois anneaux en perspective) */
+.circle{position:absolute;left:50%;bottom:26px;width:min(300px,78%);aspect-ratio:1;transform:translateX(-50%) perspective(600px) rotateX(74deg);z-index:1}
+.circle span{position:absolute;inset:0;border-radius:50%}
+.circle span:nth-child(1){background:radial-gradient(closest-side,rgba(156,192,255,.45),rgba(111,156,255,.12) 60%,transparent);filter:blur(2px)}
+.circle span:nth-child(2){inset:6%;border:3px dashed rgba(207,224,255,.55);animation:spin 26s linear infinite;box-shadow:0 0 24px rgba(111,156,255,.5),inset 0 0 24px rgba(111,156,255,.35)}
+.circle span:nth-child(3){inset:22%;border:2px solid rgba(207,224,255,.35);animation:spin 18s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Lucioles qui montent autour du joueur */
+.motes{position:absolute;inset:0 0 70px;z-index:3;pointer-events:none;overflow:hidden}
+.motes i{position:absolute;bottom:12%;width:4px;height:4px;border-radius:1px;background:#e3eeff;box-shadow:0 0 8px 2px rgba(156,192,255,.8);opacity:0;animation:mote 6s ease-in infinite}
+.motes i:nth-child(1){left:30%;animation-delay:0s}
+.motes i:nth-child(2){left:62%;animation-delay:-1.2s;animation-duration:7s}
+.motes i:nth-child(3){left:44%;animation-delay:-2.4s}
+.motes i:nth-child(4){left:70%;animation-delay:-3.1s;animation-duration:5.5s}
+.motes i:nth-child(5){left:24%;animation-delay:-4s;animation-duration:7.5s}
+.motes i:nth-child(6){left:55%;animation-delay:-4.8s}
+.motes i:nth-child(7){left:38%;animation-delay:-5.5s;animation-duration:6.5s}
+.motes i:nth-child(8){left:76%;animation-delay:-1.8s;background:#ffe2b0;box-shadow:0 0 8px 2px rgba(255,206,140,.7)}
+.motes i:nth-child(9){left:20%;animation-delay:-3.6s;background:#ffe2b0;box-shadow:0 0 8px 2px rgba(255,206,140,.7)}
+.motes i:nth-child(10){left:50%;animation-delay:-0.6s;animation-duration:8s}
+@keyframes mote{0%{opacity:0;transform:translate(0,0)}15%{opacity:1}60%{transform:translate(14px,-200px)}100%{opacity:0;transform:translate(-8px,-340px)}}
+
+/* Boutons « essayer » */
+.try{position:relative;z-index:3;display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.try button{
+  display:inline-flex;align-items:center;gap:7px;cursor:pointer;font:600 13.5px var(--sans);color:var(--muted);
+  padding:8px 13px;border-radius:10px;background:rgba(17,26,48,.8);border:1px solid var(--line-2);box-shadow:0 3px 0 #060a14;
+  transition:transform .12s,box-shadow .12s,color .15s,border-color .15s;
 }
-.walker .flip{position:absolute;inset:0;animation:flip 48s linear infinite}
-.walker .figure{position:absolute;inset:0;animation:bob .35s ease-in-out infinite alternate}
-.walker.jump .figure{animation:jump .55s cubic-bezier(.3,.7,.4,1)}
-.walker .part,.walker .hat{
-  position:absolute;background-image:var(--skin);background-repeat:no-repeat;
-  background-size:calc(64*var(--px)) auto;image-rendering:pixelated;
+.try button .ic{width:15px;height:15px;color:var(--accent)}
+.try button:hover{color:var(--text);transform:translateY(-1px)}
+.try button[aria-pressed="true"]{color:var(--text);border-color:var(--accent-strong);background:rgba(47,90,200,.35);transform:translateY(2px);box-shadow:0 1px 0 #060a14}
+.drag{position:relative;z-index:3;margin-top:10px;font-size:12.5px;color:var(--dim)}
+/* Sans JavaScript (ou si la 3D ne se charge pas), on cache les commandes. */
+.stage:not(.ready) .try,.stage:not(.ready) .drag{visibility:hidden}
+
+@media (max-width:980px){
+  .shop-grid{grid-template-columns:1fr}
+  .stage{height:420px;margin-top:10px}
 }
-.walker .head{left:0;top:0;width:calc(8*var(--px));height:calc(8*var(--px));background-position:0 calc(-8*var(--px))}
-.walker .hat{inset:0;background-position:calc(-32*var(--px)) calc(-8*var(--px))}
-.walker .body{left:calc(2*var(--px));top:calc(8*var(--px));width:calc(4*var(--px));height:calc(12*var(--px));background-position:calc(-16*var(--px)) calc(-20*var(--px))}
-.walker .arm{left:calc(2*var(--px));top:calc(8*var(--px));width:calc(4*var(--px));height:calc(12*var(--px));background-position:calc(-40*var(--px)) calc(-20*var(--px));transform-origin:50% calc(2*var(--px))}
-.walker .leg{left:calc(2*var(--px));top:calc(20*var(--px));width:calc(4*var(--px));height:calc(12*var(--px));background-position:0 calc(-20*var(--px));transform-origin:50% 0}
-.walker .back{filter:brightness(.55)}
-.walker .leg.front,.walker .arm.back{animation:swing .7s ease-in-out infinite}
-.walker .leg.back,.walker .arm.front{animation:swing .7s ease-in-out infinite;animation-delay:-.35s}
-.walker .nametag{
-  position:absolute;left:50%;bottom:calc(32*var(--px) + 10px);transform:translateX(-50%);white-space:nowrap;
-  font:11px var(--pix);color:#fff;background:rgba(0,0,0,.45);padding:3px 6px 2px;border-radius:2px;
+@media (max-width:600px){
+  .try{gap:6px}
+  .try button{padding:7px 10px;font-size:13px}
+  .try button .ic{display:none}
 }
-.walker .shadow{position:absolute;left:50%;bottom:-5px;width:44px;height:10px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.55),transparent)}
-@keyframes walk{
-  0%{transform:translateX(-80px)}
-  46%{transform:translateX(calc(100vw + 40px))}
-  50%{transform:translateX(calc(100vw + 40px))}
-  96%{transform:translateX(-80px)}
-  100%{transform:translateX(-80px)}
-}
-@keyframes flip{0%,47.9%{transform:scaleX(1)}48%,97.9%{transform:scaleX(-1)}98%,100%{transform:scaleX(1)}}
-@keyframes swing{0%,100%{transform:rotate(28deg)}50%{transform:rotate(-28deg)}}
-@keyframes bob{to{transform:translateY(-2px)}}
-@keyframes jump{0%{transform:translateY(0)}40%{transform:translateY(-44px)}70%{transform:translateY(0)}85%{transform:translateY(-6px)}100%{transform:translateY(0)}}
-@keyframes lantern{from{opacity:.7}to{opacity:1}}
-@media (max-width:600px){.walker-track{--px:3px;--ground:160px}}
-@media (prefers-reduced-motion:reduce){.walker{left:12%}}

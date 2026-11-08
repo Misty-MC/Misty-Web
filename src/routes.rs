@@ -185,6 +185,26 @@ pub async fn shop(
     res
 }
 
+/// `/skin/<pseudo>` (ou `/skin/<pseudo>.png`) : le skin du joueur, relayé depuis le site
+/// pour que l'aperçu 3D puisse le lire.
+pub async fn skin(State(state): State<Arc<AppState>>, Path(name): Path<String>) -> Response {
+    let name = name.strip_suffix(".png").unwrap_or(&name);
+    if !shop::valid_username(name) {
+        return (StatusCode::NOT_FOUND, "Pseudo invalide").into_response();
+    }
+    let Some(png) = state.skins.get(state.github.http(), name).await else {
+        return (StatusCode::BAD_GATEWAY, "Skin indisponible").into_response();
+    };
+    let mut res = Body::from(png).into_response();
+    let h = res.headers_mut();
+    h.insert(header::CONTENT_TYPE, HeaderValue::from_static("image/png"));
+    h.insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("public, max-age=600"),
+    );
+    res
+}
+
 pub async fn robots(State(state): State<Arc<AppState>>) -> Response {
     let mut res = crate::seo::robots_txt(&state.site_url).into_response();
     res.headers_mut().insert(

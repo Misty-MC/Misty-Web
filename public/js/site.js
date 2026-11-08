@@ -51,28 +51,87 @@
     scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
   });
 
-  // ---------- Boutique : le joueur qui se promène dans la forêt ----------
-  const walker = document.getElementById("walker");
-  if (walker) {
-    // Un clic le fait sauter
-    walker.addEventListener("click", () => {
-      walker.classList.remove("jump"); void walker.offsetWidth; walker.classList.add("jump");
-    });
-    walker.addEventListener("animationend", e => { if (e.animationName === "jump") walker.classList.remove("jump"); });
-    // Aperçu en direct : le skin change pendant qu'on tape son pseudo
+  // ---------- Boutique : vitrine 3D du skin ----------
+  const stage = document.getElementById("stage");
+  if (stage && window.skinview3d) {
+    const sv = window.skinview3d;
+    const canvas = document.getElementById("skin3d");
+    const viewer = new sv.SkinViewer({ canvas, width: canvas.clientWidth || 360, height: canvas.clientHeight || 420, zoom: 0.62, fov: 36 });
+    viewer.globalLight.intensity = 2.4;
+    viewer.cameraLight.intensity = 0.8;
+    viewer.controls.enableZoom = false;
+    viewer.controls.enablePan = false;
+    viewer.autoRotate = !reduce;
+    viewer.autoRotateSpeed = 0.7;
+    viewer.animation = new sv.WalkingAnimation();
+    viewer.animation.speed = 0.55;
+    viewer.animation.paused = reduce;
+
+    const setName = name => {
+      viewer.nameTag = name
+        ? new sv.NameTagObject(name, { font: "48px Silkscreen", height: 2.4, margin: [4, 8, 2, 8], textStyle: "#eaf1ff", backgroundStyle: "rgba(10,15,29,.55)" })
+        : null;
+    };
+    const loadSkin = url => viewer.loadSkin(url).catch(() => viewer.loadSkin("/skin/MHF_Steve").catch(() => {}));
+    loadSkin(stage.dataset.skin);
+    setName(stage.dataset.name);
+
+    // Cape et élytres « Misty », dessinées en pixel art : dégradé nuit → brume et petit nuage.
+    const mistyTexture = () => {
+      const c = document.createElement("canvas");
+      c.width = 64; c.height = 32;
+      const g = c.getContext("2d");
+      const shade = (x, y, h, x0) => {
+        const t = y / h, d = ((x + y) % 2) * 6 - 3 + (((x - x0) * 7 + y * 3) % 5) - 2;
+        const r = Math.round(26 + 70 * t + d), gg = Math.round(40 + 105 * t + d), b = Math.round(77 + 160 * t + d);
+        return `rgb(${r},${gg},${b})`;
+      };
+      const fill = (x0, y0, w, h) => {
+        for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) { g.fillStyle = shade(x, y - y0, h, x0); g.fillRect(x, y, 1, 1); }
+      };
+      const cloud = (ox, oy) => {
+        const rows = ["..###...", ".######.", "########", "########", ".######."];
+        rows.forEach((row, y) => [...row].forEach((ch, x) => {
+          if (ch !== "#") return;
+          g.fillStyle = y === 4 ? "#b9cdf5" : "#eaf1ff"; g.fillRect(ox + x, oy + y, 1, 1);
+        }));
+        g.fillStyle = "#cfe0ff"; g.fillRect(ox, oy + 6, 6, 1); g.fillRect(ox + 4, oy + 8, 4, 1);
+      };
+      fill(0, 0, 22, 17);            // cape (toutes les faces)
+      cloud(2, 5); cloud(12, 5);     // nuage dos et face
+      fill(22, 0, 24, 22);           // élytres
+      g.fillStyle = "rgba(10,15,29,.35)";
+      for (let x = 24; x < 46; x += 3) g.fillRect(x, 2, 1, 18); // plumes
+      cloud(34, 6);
+      return c;
+    };
+    const texture = mistyTexture();
+    stage.querySelectorAll(".try button").forEach(btn => btn.addEventListener("click", () => {
+      const back = btn.dataset.back;
+      viewer.loadCape(back === "none" ? null : texture, back === "none" ? undefined : { backEquipment: back });
+      stage.querySelectorAll(".try button").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
+    }));
+
+    // Taille du rendu = taille affichée ; pas de rendu quand la vitrine est hors de l'écran.
+    const resize = () => { viewer.width = canvas.clientWidth; viewer.height = canvas.clientHeight; };
+    if ("ResizeObserver" in window) new ResizeObserver(resize).observe(canvas);
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(([e]) => { viewer.renderPaused = !e.isIntersecting; }).observe(stage);
+    }
+
+    // Aperçu en direct pendant qu'on tape son pseudo
     const input = document.getElementById("player");
-    const tag = walker.querySelector(".nametag");
     let timer;
     input?.addEventListener("input", () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
         const name = input.value.trim();
         if (!/^[A-Za-z0-9_]{3,16}$/.test(name)) return;
-        walker.style.setProperty("--skin", `url('https://mc-heads.net/skin/${name}')`);
-        tag.textContent = name; tag.hidden = false;
-        walker.click();
+        loadSkin(`/skin/${name}`);
+        setName(name);
       }, 450);
     });
+    stage.classList.add("ready");
   }
 
   // ---------- Documentation ----------

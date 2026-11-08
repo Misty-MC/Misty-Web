@@ -20,24 +20,26 @@ pub fn valid_username(name: &str) -> bool {
 
 pub fn render(p: &Page, view: ShopView) -> Markup {
     let tr = p.tr;
-    // Le personnage qui se promène dans la forêt : le skin du joueur choisi, sinon Steve.
+    // Skin affiché dans la vitrine 3D : celui du joueur choisi, sinon Steve.
     let (skin, tag) = match &view {
         ShopView::Soon { player } => (*player, Some(*player)),
         ShopView::Form { value, .. } if valid_username(value) => (*value, Some(*value)),
         ShopView::Form { .. } => ("MHF_Steve", None),
     };
     let main = html! {
-        (walker(skin, tag))
         section.hero.pn-hero.shop-hero {
-            div.wrap { div.pn-copy {
-                div.tags { span { (icons::bag()) (tr.shop_label) } }
-                h1 { (tr.shop_h1_1) br; span.accent { (tr.shop_h1_2) } }
-                p.sub { (tr.shop_sub) }
-                @match view {
-                    ShopView::Form { value, invalid } => { (form(p, value, invalid)) }
-                    ShopView::Soon { player } => { (soon(p, player)) }
+            div.wrap.shop-grid {
+                div.pn-copy {
+                    div.tags { span { (icons::bag()) (tr.shop_label) } }
+                    h1 { (tr.shop_h1_1) br; span.accent { (tr.shop_h1_2) } }
+                    p.sub { (tr.shop_sub) }
+                    @match view {
+                        ShopView::Form { value, invalid } => { (form(p, value, invalid)) }
+                        ShopView::Soon { player } => { (soon(p, player)) }
+                    }
                 }
-            } }
+                (stage(p, skin, tag))
+            }
         }
         section.sec.shop-cats {
             div.wrap {
@@ -57,33 +59,31 @@ pub fn render(p: &Page, view: ShopView) -> Markup {
             description: &tr.shop_sub,
             jsonld: None,
             css: &["home", "patch-notes", "shop"],
+            scripts: &["/vendor/skinview3d/skinview3d.bundle.js"],
             body_class: "shop",
         },
         main,
     )
 }
 
-/// Personnage en pixel art construit avec les faces du skin (vue de profil) : il marche dans
-/// la forêt du fond, fait demi-tour au bout et saute quand on clique dessus.
-/// Le skin vient de mc-heads.net ; le nom est déjà validé, il ne contient que [A-Za-z0-9_].
-fn walker(skin: &str, tag: Option<&str>) -> Markup {
-    let style = format!("--skin:url('https://mc-heads.net/skin/{skin}')");
+/// Vitrine 3D : le skin du joueur (skinview3d) sur un cercle de lumière, avec un halo de lune,
+/// des lucioles et des boutons pour essayer la cape et les élytres Misty.
+/// Le skin est relayé par le serveur (`/skin/<pseudo>`) ; le pseudo est déjà validé.
+fn stage(p: &Page, skin: &str, tag: Option<&str>) -> Markup {
+    let tr = p.tr;
     html! {
-        div.walker-track aria-hidden="true" {
-            div.walker #walker style=(style) {
-                span.nametag hidden[tag.is_none()] { (tag.unwrap_or("")) }
-                div.flip {
-                    div.figure {
-                        div.part.arm.back {}
-                        div.part.leg.back {}
-                        div.part.body {}
-                        div.part.leg.front {}
-                        div.part.arm.front {}
-                        div.part.head { div.hat {} }
-                    }
-                }
-                span.shadow {}
+        div.stage #stage data-skin=(format!("/skin/{skin}")) data-name=(tag.unwrap_or("")) {
+            span.stage-label { (icons::sparkles()) (tr.shop_preview) }
+            div.halo aria-hidden="true" {}
+            div.circle aria-hidden="true" { span {} span {} span {} }
+            div.motes aria-hidden="true" { @for _ in 0..10 { i {} } }
+            canvas #skin3d role="img" aria-label=(tr.shop_preview) {}
+            div.try role="group" aria-label=(tr.shop_preview) {
+                button type="button" data-back="none" aria-pressed="true" { (tr.shop_try_none) }
+                button type="button" data-back="cape" aria-pressed="false" { (icons::cape()) (tr.shop_try_cape) }
+                button type="button" data-back="elytra" aria-pressed="false" { (icons::wings()) (tr.shop_try_elytra) }
             }
+            p.drag { (tr.shop_drag) }
         }
     }
 }

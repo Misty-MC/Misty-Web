@@ -81,6 +81,7 @@ pub fn render(p: &Page, latest: Option<&Release>) -> Markup {
             description: &tr.description,
             jsonld: Some(crate::seo::home_jsonld(p.site_url, tr, p.repo, latest)),
             css: &["home"],
+            scripts: &[],
             body_class: "home",
         },
         main,

@@ -204,6 +204,11 @@ pub struct Tr {
     pub shop_cat_wings_p: String,
     pub shop_cat_effects: String,
     pub shop_cat_effects_p: String,
+    pub shop_preview: String,
+    pub shop_try_none: String,
+    pub shop_try_cape: String,
+    pub shop_try_elytra: String,
+    pub shop_drag: String,
 }
 
 fn parse(code: &str, src: &str) -> Tr {

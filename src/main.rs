@@ -6,6 +6,7 @@
 //! - `MISTY_REPO` (`Misty-MC/Misty` par défaut) : dépôt dont on affiche les releases
 //! - `MISTY_PUBLIC_DIR` (`public` par défaut) : fichiers statiques (CSS, JS, images, polices)
 //! - `SITE_URL` (`https://misty-launcher.online` par défaut) : adresse publique, pour le référencement
+//! - `SKIN_API` (`https://mc-heads.net` par défaut) : service qui fournit les skins (boutique)
 //! - `GITHUB_API` (`https://api.github.com` par défaut) : utile pour tester avec une fausse API
 
 mod docs;
@@ -16,6 +17,7 @@ mod markdown;
 mod routes;
 mod scene;
 mod seo;
+mod skins;
 mod views;
 
 use axum::Router;
@@ -32,6 +34,8 @@ pub struct AppState {
     pub scene: String,
     /// Adresse publique du site, sans `/` final.
     pub site_url: String,
+    /// Relais des skins pour l'aperçu 3D de la boutique.
+    pub skins: skins::Skins,
     /// Bande de brume pixel, insérée entre les sections.
     pub fog_strip: String,
 }
@@ -60,6 +64,7 @@ async fn main() {
             moon_r: 44,
         }),
         fog_strip: scene::fog_strip(11),
+        skins: skins::Skins::new(env_or("SKIN_API", "https://mc-heads.net")),
         site_url: env_or("SITE_URL", "https://misty-launcher.online")
             .trim_end_matches('/')
             .to_string(),
@@ -78,6 +83,7 @@ async fn main() {
         .route("/", get(routes::index))
         .route("/patch-notes", get(routes::patch_notes))
         .route("/shop", get(routes::shop))
+        .route("/skin/{name}", get(routes::skin))
         .route("/robots.txt", get(routes::robots))
         .route("/sitemap.xml", get(routes::sitemap))
         .route("/docs", get(routes::docs_index))

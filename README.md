@@ -50,6 +50,7 @@ public/
 
 The code is released under the [MIT License](LICENSE).
 The Silkscreen font is distributed under the [SIL Open Font License](public/assets/OFL.txt).
+[skinview3d](https://github.com/bs-community/skinview3d) (3D skin preview in the shop) is bundled under the [MIT License](public/vendor/skinview3d/LICENSE).
 
 ---
 
