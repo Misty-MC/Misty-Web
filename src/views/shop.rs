@@ -20,7 +20,14 @@ pub fn valid_username(name: &str) -> bool {
 
 pub fn render(p: &Page, view: ShopView) -> Markup {
     let tr = p.tr;
+    // Le personnage qui se promène dans la forêt : le skin du joueur choisi, sinon Steve.
+    let (skin, tag) = match &view {
+        ShopView::Soon { player } => (*player, Some(*player)),
+        ShopView::Form { value, .. } if valid_username(value) => (*value, Some(*value)),
+        ShopView::Form { .. } => ("MHF_Steve", None),
+    };
     let main = html! {
+        (walker(skin, tag))
         section.hero.pn-hero.shop-hero {
             div.wrap { div.pn-copy {
                 div.tags { span { (icons::bag()) (tr.shop_label) } }
@@ -47,11 +54,38 @@ pub fn render(p: &Page, view: ShopView) -> Markup {
         p,
         Head {
             title: &tr.shop_title,
+            description: &tr.shop_sub,
+            jsonld: None,
             css: &["home", "patch-notes", "shop"],
             body_class: "shop",
         },
         main,
     )
+}
+
+/// Personnage en pixel art construit avec les faces du skin (vue de profil) : il marche dans
+/// la forêt du fond, fait demi-tour au bout et saute quand on clique dessus.
+/// Le skin vient de mc-heads.net ; le nom est déjà validé, il ne contient que [A-Za-z0-9_].
+fn walker(skin: &str, tag: Option<&str>) -> Markup {
+    let style = format!("--skin:url('https://mc-heads.net/skin/{skin}')");
+    html! {
+        div.walker-track aria-hidden="true" {
+            div.walker #walker style=(style) {
+                span.nametag hidden[tag.is_none()] { (tag.unwrap_or("")) }
+                div.flip {
+                    div.figure {
+                        div.part.arm.back {}
+                        div.part.leg.back {}
+                        div.part.body {}
+                        div.part.leg.front {}
+                        div.part.arm.front {}
+                        div.part.head { div.hat {} }
+                    }
+                }
+                span.shadow {}
+            }
+        }
+    }
 }
 
 fn form(p: &Page, value: &str, invalid: bool) -> Markup {

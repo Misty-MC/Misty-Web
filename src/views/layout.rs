@@ -28,6 +28,8 @@ pub struct Page<'a> {
     pub fog: &'a str,
     /// Paysage de fond (SVG), identique sur toutes les pages.
     pub scene: &'a str,
+    /// Adresse publique du site, sans `/` final (balises canoniques, Open Graph, sitemap).
+    pub site_url: &'a str,
 }
 
 impl Page<'_> {
@@ -41,6 +43,10 @@ impl Page<'_> {
 
 pub struct Head<'a> {
     pub title: &'a str,
+    /// Description de la page pour les moteurs de recherche et les aperçus de liens.
+    pub description: &'a str,
+    /// Données structurées JSON-LD (déjà sérialisées), pour les moteurs de recherche.
+    pub jsonld: Option<String>,
     /// Feuilles de style propres à la page, en plus de base.css et layout.css.
     pub css: &'a [&'a str],
     pub body_class: &'a str,
@@ -55,9 +61,39 @@ pub fn render(p: &Page, head: Head, main: Markup) -> Markup {
                 meta charset="utf-8";
                 meta name="viewport" content="width=device-width, initial-scale=1";
                 title { (head.title) }
-                meta name="description" content=(tr.description);
+                meta name="description" content=(head.description);
                 meta name="theme-color" content="#0a0f1d";
+                meta name="robots" content="index, follow, max-image-preview:large";
+                meta name="application-name" content="Misty MC";
+                // Une URL par langue (?lang=xx) : la canonique pointe sur la langue affichée,
+                // et les variantes hreflang annoncent les autres à Google.
+                @let base = format!("{}{}", p.site_url, p.path);
+                @let canonical = format!("{base}?lang={}", p.lang.code());
+                link rel="canonical" href=(canonical);
+                @for l in Lang::ALL {
+                    link rel="alternate" hreflang=(l.code()) href=(format!("{base}?lang={}", l.code()));
+                }
+                link rel="alternate" hreflang="x-default" href=(base);
+                // Aperçus de liens (Discord, réseaux sociaux…)
+                @let image = format!("{}/assets/screens/en/home.png", p.site_url);
+                meta property="og:type" content="website";
+                meta property="og:site_name" content="Misty MC";
+                meta property="og:title" content=(head.title);
+                meta property="og:description" content=(head.description);
+                meta property="og:url" content=(canonical);
+                meta property="og:image" content=(image);
+                meta property="og:image:width" content="1180";
+                meta property="og:image:height" content="720";
+                meta property="og:locale" content=(tr.og_locale);
+                meta name="twitter:card" content="summary_large_image";
+                meta name="twitter:title" content=(head.title);
+                meta name="twitter:description" content=(head.description);
+                meta name="twitter:image" content=(image);
                 link rel="icon" href="/assets/icone.png";
+                link rel="apple-touch-icon" href="/assets/icone.png";
+                @if let Some(json) = &head.jsonld {
+                    script type="application/ld+json" { (PreEscaped(json)) }
+                }
                 link rel="preload" href="/assets/Silkscreen-Regular.ttf" as="font" type="font/ttf" crossorigin;
                 @let v = ASSET_VERSION.as_str();
                 link rel="stylesheet" href=(format!("/css/base.css?v={v}"));

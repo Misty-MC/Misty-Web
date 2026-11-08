@@ -1,12 +1,13 @@
 # Español — todas las claves son obligatorias (comprobado con `cargo test`).
 code = "es"
 lang_name = "Español"
-title = "Misty – Launcher de Minecraft"
-description = "Misty, un launcher de Minecraft ligero escrito en Rust: perfiles, mods de Modrinth y CurseForge, modpacks, todos los mod loaders."
+title = "Misty MC – Launcher de Minecraft gratis y ligero, escrito en Rust"
+description = "Misty (Misty MC) es un launcher de Minecraft gratis y ligero para Windows, escrito en Rust: todas las versiones, Forge, NeoForge, Fabric, OptiFine, mods y modpacks de Modrinth y CurseForge, skins y capas."
 date_order = "dmy"
 months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 decimal_sep = ","
 mb = "MB"
+og_locale = "es_ES"
 
 nav_features = "Características"
 nav_loaders = "Compatibilidad"
@@ -96,7 +97,7 @@ a5 = "Forge, NeoForge, Fabric, OptiFine y LiteLoader. Misty solo propone los que
 cta_title = "¿Listo para jugar?"
 cta_text = "Descarga Misty y empieza tu próxima partida en pocos clics."
 
-ft_tag = "El launcher de Minecraft ligero, rápido y elegante."
+ft_tag = "Misty MC, el launcher de Minecraft ligero, rápido y elegante."
 ft_nav = "Navegación"
 ft_about_t = "Acerca de"
 ft_about_p = "Misty es un launcher independiente. No incluye ningún archivo de Minecraft: el juego se descarga desde los servidores oficiales de Mojang en el primer inicio."
@@ -104,7 +105,7 @@ ft_disclaimer = "Misty no está afiliado a Mojang Studios ni a Microsoft. Minecr
 ft_made = "Hecho en Rust, del servidor al launcher."
 ft_top = "Volver arriba"
 
-pn_title = "Notas de versión – Misty"
+pn_title = "Notas de versión – Misty MC"
 pn_label = "Notas de versión"
 pn_h1_1 = "Cada versión,"
 pn_h1_2 = "en cuanto sale."
@@ -122,13 +123,13 @@ pn_files = "Archivos"
 pn_view_github = "Ver en GitHub"
 pn_unavailable = "No se pueden obtener las versiones desde GitHub ahora mismo. Inténtalo de nuevo en unos minutos."
 
-nf_title = "Página no encontrada"
+nf_title = "Página no encontrada – Misty MC"
 nf_text = "Esta página se perdió en la niebla."
 nf_back = "Volver al inicio"
 
 # Documentation
 nav_docs = "Docs"
-docs_title = "Documentación – Misty"
+docs_title = "Documentación – Misty MC"
 docs_label = "Documentación"
 docs_h1_1 = "Todo sobre Misty,"
 docs_h1_2 = "paso a paso."
@@ -150,7 +151,7 @@ docs_sec_dev = "Desarrollo"
 
 # Boutique
 nav_shop = "Tienda"
-shop_title = "Tienda – Misty"
+shop_title = "Tienda – Misty MC"
 shop_label = "Tienda"
 shop_h1_1 = "Cosméticos"
 shop_h1_2 = "para destacar en el juego."

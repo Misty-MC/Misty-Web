@@ -47,6 +47,8 @@ pub fn index(p: &Page, set: &DocSet) -> Markup {
         p,
         Head {
             title: &tr.docs_title,
+            description: &tr.docs_sub,
+            jsonld: None,
             css: &["docs"],
             body_class: "docs",
         },
@@ -110,6 +112,8 @@ pub fn page(p: &Page, set: &DocSet, idx: usize) -> Markup {
         p,
         Head {
             title: &title,
+            description: &d.description,
+            jsonld: Some(crate::seo::doc_jsonld(p.site_url, tr, d, p.lang)),
             css: &["docs"],
             body_class: "docs",
         },

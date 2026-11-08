@@ -51,6 +51,30 @@
     scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
   });
 
+  // ---------- Boutique : le joueur qui se promène dans la forêt ----------
+  const walker = document.getElementById("walker");
+  if (walker) {
+    // Un clic le fait sauter
+    walker.addEventListener("click", () => {
+      walker.classList.remove("jump"); void walker.offsetWidth; walker.classList.add("jump");
+    });
+    walker.addEventListener("animationend", e => { if (e.animationName === "jump") walker.classList.remove("jump"); });
+    // Aperçu en direct : le skin change pendant qu'on tape son pseudo
+    const input = document.getElementById("player");
+    const tag = walker.querySelector(".nametag");
+    let timer;
+    input?.addEventListener("input", () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const name = input.value.trim();
+        if (!/^[A-Za-z0-9_]{3,16}$/.test(name)) return;
+        walker.style.setProperty("--skin", `url('https://mc-heads.net/skin/${name}')`);
+        tag.textContent = name; tag.hidden = false;
+        walker.click();
+      }, 450);
+    });
+  }
+
   // ---------- Documentation ----------
   // Recherche instantanée : filtre les pages sur leur titre, description et intertitres,
   // puis sur tout leur texte dès que l'index plein texte est chargé (au premier caractère tapé).

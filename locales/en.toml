@@ -1,12 +1,13 @@
 # English — every key is required (checked by `cargo test`).
 code = "en"
 lang_name = "English"
-title = "Misty – Minecraft Launcher"
-description = "Misty, a lightweight Minecraft launcher written in Rust: profiles, Modrinth and CurseForge mods, modpacks, every mod loader."
+title = "Misty MC – Free, lightweight Minecraft launcher written in Rust"
+description = "Misty (Misty MC) is a free, lightweight Minecraft launcher for Windows written in Rust: every version, Forge, NeoForge, Fabric, OptiFine, Modrinth and CurseForge mods and modpacks, skins and capes."
 date_order = "mdy"
 months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 decimal_sep = "."
 mb = "MB"
+og_locale = "en_US"
 
 nav_features = "Features"
 nav_loaders = "Compatibility"
@@ -96,7 +97,7 @@ a5 = "Forge, NeoForge, Fabric, OptiFine and LiteLoader. Misty only offers the on
 cta_title = "Ready to play?"
 cta_text = "Download Misty and start your next game in a few clicks."
 
-ft_tag = "The light, fast and elegant Minecraft launcher."
+ft_tag = "Misty MC, the light, fast and elegant Minecraft launcher."
 ft_nav = "Navigation"
 ft_about_t = "About"
 ft_about_p = "Misty is an independent launcher. It ships no Minecraft files: the game is downloaded from Mojang's official servers on first launch."
@@ -104,7 +105,7 @@ ft_disclaimer = "Misty is not affiliated with Mojang Studios or Microsoft. Minec
 ft_made = "Made in Rust, from the server to the launcher."
 ft_top = "Back to top"
 
-pn_title = "Patch notes – Misty"
+pn_title = "Patch notes – Misty MC"
 pn_label = "Patch notes"
 pn_h1_1 = "Every version,"
 pn_h1_2 = "as it ships."
@@ -122,13 +123,13 @@ pn_files = "Files"
 pn_view_github = "View on GitHub"
 pn_unavailable = "Can't fetch versions from GitHub right now. Try again in a few minutes."
 
-nf_title = "Page not found"
+nf_title = "Page not found – Misty MC"
 nf_text = "This page got lost in the mist."
 nf_back = "Back to home"
 
 # Documentation
 nav_docs = "Docs"
-docs_title = "Documentation – Misty"
+docs_title = "Documentation – Misty MC"
 docs_label = "Documentation"
 docs_h1_1 = "Everything about Misty,"
 docs_h1_2 = "step by step."
@@ -150,7 +151,7 @@ docs_sec_dev = "Development"
 
 # Boutique
 nav_shop = "Shop"
-shop_title = "Shop – Misty"
+shop_title = "Shop – Misty MC"
 shop_label = "Shop"
 shop_h1_1 = "Cosmetics"
 shop_h1_2 = "to stand out in game."
