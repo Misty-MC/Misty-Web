@@ -116,28 +116,22 @@
       g.fillStyle = "#1c2a4d";
       g.fillRect(1, 0, 10, 1); g.fillRect(11, 0, 10, 1);              // dessus, dessous
       g.fillRect(0, 1, 1, 16); g.fillRect(11, 1, 1, 16);              // côtés
-      // Élytres (patron 64×32, région 22,0), sur le modèle des élytres vanilla : le bord extérieur
-      // descend droit et le bord intérieur se découpe en diagonale (les ailes s'écartent en V vers le
-      // bas, pointe à l'extérieur). Face de dos en (36,2), bord extérieur à gauche ; face de dessous
-      // en (24,2), en miroir. Tranches transparentes : les ailes restent aussi fines qu'en vanilla.
-      const SPAN = [[1,9],[0,9],[0,9],[0,9],[0,9],[0,9],[0,9],[0,9],[0,9],[0,8],[0,8],[0,7],[0,7],[0,6],[0,6],[0,5],[0,5],[0,4],[0,3],[0,2]];
-      const MOON = ["..##.", ".#...", "#....", "#....", ".#...", "..##."];   // croissant, côté extérieur
-      const wing = (cx, y, under) => {
-        const t = y / 19, d = ((cx * 7 + y * 3) % 5) - 2;
-        let r = 24 + 62 * t + d, gg = 36 + 98 * t + d, b = 70 + 150 * t + d * 1.5;
-        const k = ((y - cx * 0.7) % 4.5 + 4.5) % 4.5;                    // plumes en diagonale
-        if (y > 5 && y < 18 && k < 1) { r += 80; gg += 82; b += 35; }
-        if (cx === 0 || (cx === SPAN[y][0] && y < 2)) { r += 45; gg += 50; b += 30; }   // liseré
-        if (MOON[y - 3]?.[cx - 1] === "#") { r = 234; gg = 241; b = 255; }
-        if (under) { r *= 0.78; gg *= 0.78; b *= 0.82; }
-        return `rgb(${Math.min(r, 245) | 0},${Math.min(gg, 248) | 0},${Math.min(b, 255) | 0})`;
-      };
-      const put = (x, y, col) => { g.fillStyle = col; g.fillRect(x, y, 1, 1); };
-      for (let y = 0; y < 20; y++) {
-        const [a, z] = SPAN[y];
-        for (let cx = a; cx <= z; cx++) {
-          put(36 + cx, 2 + y, wing(cx, y, false));      // dos
-          put(24 + 9 - cx, 2 + y, wing(cx, y, true));   // dessous
+      // Élytres : même masque que les capes officielles de Mojang. Seule la face de dos est peinte
+      // (x 34→42, y 2→21, plus l'attache en haut) ; les autres faces restent transparentes, sinon
+      // l'aile apparaît en double et épaisse. Chaque ligne : [première, dernière] colonne opaque.
+      const MASK = [[31,33],[32,33],[34,42],[34,42],[35,42],[35,42],[35,42],[35,42],[35,42],[35,42],[35,42],[35,42],[36,42],[36,42],[36,42],[36,42],[37,41],[37,41],[37,41],[37,41],[38,40],[38,39]];
+      const MOON = ["..##", ".#..", "#...", "#...", ".#..", "..##"];   // croissant de lune
+      for (let y = 0; y < MASK.length; y++) {
+        const [x0, x1] = MASK[y];
+        for (let x = x0; x <= x1; x++) {
+          const t = y / 21, d = ((x * 7 + y * 3) % 5) - 2;
+          let r = 24 + 62 * t + d, gg = 36 + 98 * t + d, b = 70 + 150 * t + d * 1.5;
+          const k = ((y - (x - 35) * 0.7) % 4.5 + 4.5) % 4.5;               // plumes en diagonale
+          if (y > 7 && y < 20 && k < 1) { r += 70; gg += 72; b += 30; }
+          if (x === x0) { r += 40; gg += 45; b += 28; }                    // liseré
+          if (MOON[y - 4]?.[x - 37] === "#") { r = 234; gg = 241; b = 255; }
+          g.fillStyle = `rgb(${Math.min(r, 245) | 0},${Math.min(gg, 248) | 0},${Math.min(b, 255) | 0})`;
+          g.fillRect(x, y, 1, 1);
         }
       }
       return c;
@@ -181,8 +175,8 @@
       else {
         // Élytres : une aile et son reflet
         const w = c.width / 2;
-        g.drawImage(misty, 36, 2, 10, 20, 0, 0, w, c.height);
-        g.save(); g.scale(-1, 1); g.drawImage(misty, 36, 2, 10, 20, -c.width, 0, w, c.height); g.restore();
+        g.drawImage(misty, 34, 2, 9, 20, 0, 0, w, c.height);
+        g.save(); g.scale(-1, 1); g.drawImage(misty, 34, 2, 9, 20, -c.width, 0, w, c.height); g.restore();
       }
     });
 
