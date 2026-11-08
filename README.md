@@ -23,7 +23,7 @@ Rendered server-side in Rust: pages, translations, patch notes and the pixel-art
 
 ## 🖼️ Launcher screenshots
 
-The screenshots shown on the site live in `public/assets/screens/<lang>/` (`en` and `fr`, 1180 × 720): `home`, `profiles`, `textures` (site gallery) and `settings` (READMEs).
+The screenshots shown on the site live in `public/assets/screens/<lang>/` (`en` and `fr`, 1180 × 720): `home`, `versions`, `skin` (site gallery), `horizon` (Horizon section), `profiles`, `textures` and `settings` (READMEs). `home` is also the link preview image.
 They are taken by the launcher itself (`MISTY_CAPTURE`, debug build), on a demo data folder (`MISTY_DATA_DIR`).
 
 ## 🗂️ Project structure

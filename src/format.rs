@@ -17,6 +17,25 @@ pub fn date(tr: &Tr, iso: Option<&str>) -> String {
     }
 }
 
+/// Un jour : « 8 novembre » ou « November 8 » (avec l'année si `annee`).
+pub fn jour(tr: &Tr, d: time::Date, annee: bool) -> String {
+    let month = &tr.months[usize::from(u8::from(d.month())) - 1];
+    let base = if tr.date_order == "mdy" { format!("{month} {}", d.day()) } else { format!("{} {month}", d.day()) };
+    if annee {
+        if tr.date_order == "mdy" { format!("{base}, {}", d.year()) } else { format!("{base} {}", d.year()) }
+    } else {
+        base
+    }
+}
+
+/// Un instant (secondes Unix, UTC) : « 8 novembre, 14:03 UTC ».
+pub fn moment(tr: &Tr, unix: i64) -> String {
+    let Ok(t) = OffsetDateTime::from_unix_timestamp(unix) else {
+        return String::new();
+    };
+    format!("{}, {:02}:{:02} UTC", jour(tr, t.date(), false), t.hour(), t.minute())
+}
+
 /// « 9,0 Mo » / « 9.0 MB ».
 pub fn size(tr: &Tr, bytes: u64) -> String {
     let mb = format!("{:.1}", bytes as f64 / 1_048_576.0);

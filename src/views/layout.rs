@@ -77,7 +77,7 @@ pub fn render(p: &Page, head: Head, main: Markup) -> Markup {
                 }
                 link rel="alternate" hreflang="x-default" href=(base);
                 // Aperçus de liens (Discord, réseaux sociaux…)
-                @let image = format!("{}/assets/screens/en/home.png", p.site_url);
+                @let image = format!("{}/assets/screens/en/home.png?v={}", p.site_url, ASSET_VERSION.as_str());
                 meta property="og:type" content="website";
                 meta property="og:site_name" content="Misty MC";
                 meta property="og:title" content=(head.title);

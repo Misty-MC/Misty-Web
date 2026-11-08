@@ -44,6 +44,18 @@
 .gallery figure.big{grid-row:span 2}
 .gallery img{width:100%;height:100%;object-fit:cover;transition:transform .6s ease}
 .gallery figure:hover img{transform:scale(1.03)}
+/* Horizon : texte à gauche, capture à droite */
+.hz{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:clamp(32px,5vw,72px);align-items:center}
+.hz h2{font-size:clamp(28px,4vw,44px);line-height:1.1;letter-spacing:-.03em;font-weight:720;margin:12px 0 14px}
+.hz .label{color:#ff9a6c}
+.hz-points{display:grid;gap:10px;margin:22px 0 26px}
+.hz-points li{display:flex;align-items:flex-start;gap:10px;color:var(--muted);font-size:15px}
+.hz-points .ic{flex:none;width:17px;height:17px;margin-top:2px;color:#ff9a6c}
+.hz .actions{display:flex;flex-wrap:wrap;gap:12px}
+.hz-note{margin-top:18px;font-size:12.5px;color:var(--dim)}
+.hz-shot{border-radius:16px;overflow:hidden;border:1px solid rgba(240,121,90,.35);background:var(--panel);box-shadow:0 30px 70px -26px rgba(240,121,90,.35),0 30px 60px -24px rgba(0,0,0,.7)}
+.hz-shot img{display:block;width:100%;height:auto}
+@media (max-width:900px){.hz{grid-template-columns:1fr}}
 .trio{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(20px,3vw,40px);margin-top:clamp(32px,4vw,48px)}
 .trio h3{display:flex;align-items:center;flex-wrap:wrap;gap:9px;font-size:16px;font-weight:650;margin-bottom:8px}
 .trio h3 .ic{color:var(--accent)}

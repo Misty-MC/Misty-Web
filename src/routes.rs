@@ -401,7 +401,7 @@ pub async fn status_page(
     let (lang, remember) = i18n::negotiate(q.lang.as_deref(), &headers);
     let count = state.github.releases().await.map(|l| l.len());
     let p = page(&state, lang, "/status", count);
-    let markup = status_view::render(&p, &state.status.lignes(), state.status.age());
+    let markup = status_view::render(&p, &state.status.lignes(), &state.status.incidents(), state.status.dispo_globale(), state.status.age());
     let mut res = html_response(StatusCode::OK, markup, lang, remember);
     res.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
     res
@@ -420,12 +420,25 @@ pub async fn status_json(State(state): State<Arc<AppState>>) -> Response {
                 "url": s.url,
                 "state": l.actuel.map(|m| m.etat.slug()),
                 "latency_ms": l.actuel.and_then(|m| m.latence).map(|d| d.as_millis() as u64),
-                "uptime_percent": l.dispo,
+                "uptime_30d_percent": l.dispo,
+                "days": l.historique.iter().map(|(d, j)| serde_json::json!({
+                    "date": d.to_string(),
+                    "state": j.map(|j| j.etat().slug()),
+                    "uptime_percent": j.map(|j| j.dispo()),
+                    "checks": j.map(|j| j.total()).unwrap_or(0),
+                })).collect::<Vec<_>>(),
             })
         })
         .collect();
     let mut res = Json(serde_json::json!({
         "checked_seconds_ago": state.status.age(),
+        "uptime_30d_percent": state.status.dispo_globale(),
+        "incidents": state.status.incidents().iter().map(|i| serde_json::json!({
+            "service": i.service,
+            "kind": if i.panne { "outage" } else { "slowdown" },
+            "start": i.debut,
+            "end": i.fin,
+        })).collect::<Vec<_>>(),
         "services": services,
     }))
     .into_response();

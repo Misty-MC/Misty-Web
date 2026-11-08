@@ -61,6 +61,7 @@ pub fn render(p: &Page, latest: Option<&Release>) -> Markup {
             }
         }
 
+        (horizon(p))
         (download(p, latest))
         (faq(p))
 
@@ -154,13 +155,43 @@ fn preview(p: &Page) -> Markup {
                 }
                 div.gallery.reveal {
                     figure.big { img src=(shot("home")) alt=(tr.alt_home) width="1180" height="720" loading="lazy"; }
-                    figure { img src=(shot("profiles")) alt=(tr.alt_profiles) width="1180" height="720" loading="lazy"; }
-                    figure { img src=(shot("textures")) alt=(tr.alt_textures) width="1180" height="720" loading="lazy"; }
+                    figure { img src=(shot("versions")) alt=(tr.alt_versions) width="1180" height="720" loading="lazy"; }
+                    figure { img src=(shot("skin")) alt=(tr.alt_skin) width="1180" height="720" loading="lazy"; }
                 }
                 div.trio.reveal {
                     div { h3 { (icons::package()) (tr.f1_t) } p { (tr.f1_p) } }
                     div { h3 { (icons::cube()) (tr.f2_t) } p { (tr.f2_p) } }
                     div { h3 { (icons::brush()) (tr.f3_t) span.tag { (tr.experimental) } } p { (tr.f3_p) } }
+                }
+            }
+        }
+    }
+}
+
+/// Horizon : Minecraft réécrit en Rust, jouable depuis le launcher.
+fn horizon(p: &Page) -> Markup {
+    let tr = p.tr;
+    let shot = format!("/assets/screens/{}/horizon.png", p.lang.screens_dir());
+    html! {
+        section.sec #horizon {
+            div.wrap.hz {
+                div.hz-copy.reveal {
+                    span.label { (tr.hz_label) }
+                    h2 { (tr.hz_title) }
+                    p.lead { (tr.hz_text) }
+                    ul.hz-points {
+                        li { (icons::check()) (tr.hz_p1) }
+                        li { (icons::check()) (tr.hz_p2) }
+                        li { (icons::check()) (tr.hz_p3) }
+                    }
+                    div.actions {
+                        a.btn.play href="/download/setup" { (icons::download()) (tr.hero_cta_download) }
+                        a.btn.ghost href="https://playhorizon.dev" target="_blank" rel="noopener" { (tr.hz_site) (icons::external()) }
+                    }
+                    p.hz-note { (tr.hz_note) }
+                }
+                figure.hz-shot.reveal {
+                    img src=(shot) alt=(tr.alt_horizon) width="1180" height="720" loading="lazy";
                 }
             }
         }

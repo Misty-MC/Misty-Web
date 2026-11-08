@@ -1,21 +1,35 @@
 //! Page de statut « faite maison » : le site vérifie lui-même, toutes les minutes, les services dont
-//! Misty a besoin (Mojang, connexion Microsoft, Modrinth, CurseForge, mod loaders, GitHub…).
+//! Misty a besoin (Mojang, connexion Microsoft, Modrinth, CurseForge, mod loaders, GitHub, Horizon…).
 //!
 //! Chaque vérification est une simple requête (sans suivre les redirections) avec un délai maximal :
 //! - en ligne : réponse sous 2,5 s, statut < 500 (un 403 ou un 404 prouve que le serveur répond) ;
 //! - lent : réponse plus lente, ou 429 (trop de requêtes) ;
 //! - hors ligne : pas de réponse, délai dépassé, ou erreur 5xx.
 //!
-//! On garde les 90 dernières vérifications de chaque service (1 h 30) pour la barre d'historique.
+//! Les vérifications sont comptées par jour (UTC) : une case de l'historique = un jour, sur 30 jours.
+//! Un incident s'ouvre après plusieurs vérifications ratées de suite et se ferme quand le service
+//! répond de nouveau ; on garde ceux des 90 derniers jours. Tout est enregistré sur le disque
+//! (`MISTY_CACHE_DIR`, sinon le dossier temporaire) pour survivre aux redémarrages.
 
-use std::collections::VecDeque;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime};
+use time::{Date, OffsetDateTime};
 
 const INTERVALLE: Duration = Duration::from_secs(60);
 const DELAI: Duration = Duration::from_secs(6);
 const LENT: Duration = Duration::from_millis(2500);
-pub const HISTORIQUE: usize = 90;
+/// Cases de l'historique (jours)
+pub const JOURS: usize = 30;
+/// Durée de l'historique des incidents (jours)
+pub const JOURS_INCIDENTS: i64 = 90;
+/// Vérifications ratées de suite avant d'ouvrir un incident (hors ligne, puis lent)
+const SEUIL_PANNE: u32 = 2;
+const SEUIL_LENTEUR: u32 = 5;
+/// Vérifications réussies de suite pour le refermer
+const SEUIL_RETOUR: u32 = 2;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Etat {
@@ -55,6 +69,7 @@ pub struct Service {
 pub enum Role {
     Telechargement,
     Notes,
+    Horizon,
     Comptes,
     Connexion,
     Skins,
@@ -68,6 +83,7 @@ pub enum Role {
 pub const SERVICES: &[Service] = &[
     Service { nom: "GitHub Releases", groupe: Groupe::Misty, url: "https://github.com/Misty-MC/Misty/releases/latest", role: Role::Telechargement },
     Service { nom: "GitHub API", groupe: Groupe::Misty, url: "https://www.githubstatus.com/api/v2/status.json", role: Role::Notes },
+    Service { nom: "Horizon", groupe: Groupe::Misty, url: "https://github.com/horizon-rust/horizon/releases", role: Role::Horizon },
     Service { nom: "Mojang API", groupe: Groupe::Minecraft, url: "https://api.mojang.com/users/profiles/minecraft/Notch", role: Role::Comptes },
     Service { nom: "Session Server", groupe: Groupe::Minecraft, url: "https://sessionserver.mojang.com/session/minecraft/profile/069a79f444e94726a5befca90e38aaf5", role: Role::Skins },
     Service { nom: "Microsoft Login", groupe: Groupe::Minecraft, url: "https://login.live.com/", role: Role::Connexion },
@@ -90,19 +106,81 @@ pub struct Mesure {
     pub latence: Option<Duration>,
 }
 
+/// Vérifications d'un service pendant un jour (UTC).
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Jour {
+    pub up: u32,
+    pub slow: u32,
+    pub down: u32,
+}
+
+impl Jour {
+    pub fn total(&self) -> u32 {
+        self.up + self.slow + self.down
+    }
+    /// Disponibilité (en ligne ou lent), en %
+    pub fn dispo(&self) -> f32 {
+        (self.up + self.slow) as f32 * 100.0 / self.total().max(1) as f32
+    }
+    /// Couleur de la case : en ligne, perturbé, ou en panne.
+    pub fn etat(&self) -> Etat {
+        let lent = self.slow as f32 * 100.0 / self.total().max(1) as f32;
+        let dispo = self.dispo();
+        if dispo >= 99.5 && lent < 10.0 {
+            Etat::EnLigne
+        } else if dispo >= 95.0 {
+            Etat::Lent
+        } else {
+            Etat::HorsLigne
+        }
+    }
+    fn plus(self, j: Jour) -> Jour {
+        Jour { up: self.up + j.up, slow: self.slow + j.slow, down: self.down + j.down }
+    }
+}
+
+/// Un incident : un service hors ligne (panne) ou lent (lenteur) plusieurs vérifications de suite.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Incident {
+    pub service: String,
+    pub panne: bool,
+    /// Secondes Unix
+    pub debut: i64,
+    pub fin: Option<i64>,
+}
+
+#[derive(Default, Serialize, Deserialize)]
+struct Donnees {
+    /// service → date (AAAA-MM-JJ) → compteurs
+    jours: HashMap<String, HashMap<String, Jour>>,
+    incidents: Vec<Incident>,
+}
+
 /// Ce que la page affiche pour un service.
 #[derive(Clone, Debug)]
 pub struct Ligne {
     pub index: usize,
     pub actuel: Option<Mesure>,
-    pub historique: Vec<Option<Etat>>,
-    /// Disponibilité sur l'historique (en ligne ou lent), en %
+    /// Les 30 derniers jours, du plus ancien à aujourd'hui
+    pub historique: Vec<(Date, Option<Jour>)>,
+    /// Disponibilité sur 30 jours, en %
     pub dispo: Option<f32>,
+}
+
+/// Suite de vérifications du même genre, pour ouvrir ou fermer un incident.
+#[derive(Default, Clone, Copy)]
+struct Serie {
+    panne: u32,
+    lenteur: u32,
+    retour: u32,
 }
 
 pub struct Status {
     http: reqwest::Client,
-    mesures: Mutex<Vec<VecDeque<Mesure>>>,
+    fichier: PathBuf,
+    actuel: Mutex<Vec<Option<Mesure>>>,
+    series: Mutex<Vec<Serie>>,
+    donnees: Mutex<Donnees>,
     derniere: Mutex<Option<SystemTime>>,
 }
 
@@ -112,8 +190,17 @@ impl Default for Status {
     }
 }
 
+fn aujourd_hui() -> Date {
+    OffsetDateTime::now_utc().date()
+}
+
 impl Status {
     pub fn new() -> Self {
+        let dossier = std::env::var_os("MISTY_CACHE_DIR").map(PathBuf::from).unwrap_or_else(std::env::temp_dir);
+        Self::avec_fichier(dossier.join("misty-site-status.json"))
+    }
+
+    fn avec_fichier(fichier: PathBuf) -> Self {
         let http = reqwest::Client::builder()
             .user_agent("misty-site-status (https://misty-launcher.online/status)")
             .connect_timeout(Duration::from_secs(4))
@@ -121,9 +208,13 @@ impl Status {
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .expect("client HTTP");
+        let donnees = std::fs::read(&fichier).ok().and_then(|o| serde_json::from_slice(&o).ok()).unwrap_or_default();
         Self {
             http,
-            mesures: Mutex::new(vec![VecDeque::new(); SERVICES.len()]),
+            fichier,
+            actuel: Mutex::new(vec![None; SERVICES.len()]),
+            series: Mutex::new(vec![Serie::default(); SERVICES.len()]),
+            donnees: Mutex::new(donnees),
             derniere: Mutex::new(None),
         }
     }
@@ -148,31 +239,116 @@ impl Status {
         for p in poignees {
             resultats.push(p.await.unwrap_or(Mesure { etat: Etat::HorsLigne, latence: None }));
         }
-        let mut mesures = self.mesures.lock().unwrap();
-        for (i, m) in resultats.into_iter().enumerate() {
-            let file = &mut mesures[i];
-            if file.len() == HISTORIQUE {
-                file.pop_front();
+        self.enregistrer(&resultats, OffsetDateTime::now_utc());
+        // écriture sur le disque hors du verrou
+        let json = serde_json::to_vec(&*self.donnees.lock().unwrap()).ok();
+        if let Some(json) = json {
+            let fichier = self.fichier.clone();
+            let _ = tokio::task::spawn_blocking(move || std::fs::write(fichier, json)).await;
+        }
+    }
+
+    /// Compte un tour de vérifications (un résultat par service, dans l'ordre de SERVICES).
+    fn enregistrer(&self, resultats: &[Mesure], maintenant: OffsetDateTime) {
+        let jour = maintenant.date().to_string();
+        let horodatage = maintenant.unix_timestamp();
+        let mut donnees = self.donnees.lock().unwrap();
+        let mut series = self.series.lock().unwrap();
+        for (i, m) in resultats.iter().enumerate() {
+            let nom = SERVICES[i].nom;
+            let compteurs = donnees.jours.entry(nom.to_string()).or_default().entry(jour.clone()).or_default();
+            match m.etat {
+                Etat::EnLigne => compteurs.up += 1,
+                Etat::Lent => compteurs.slow += 1,
+                Etat::HorsLigne => compteurs.down += 1,
             }
-            file.push_back(m);
+            // incidents
+            let s = &mut series[i];
+            match m.etat {
+                Etat::EnLigne => {
+                    s.retour += 1;
+                    s.panne = 0;
+                    s.lenteur = 0;
+                }
+                Etat::Lent => {
+                    s.lenteur += 1;
+                    s.panne = 0;
+                    s.retour = 0;
+                }
+                Etat::HorsLigne => {
+                    s.panne += 1;
+                    s.retour = 0;
+                }
+            }
+            let ouvert = donnees.incidents.iter_mut().rev().find(|x| x.service == nom && x.fin.is_none());
+            match ouvert {
+                Some(inc) => {
+                    if s.retour >= SEUIL_RETOUR {
+                        inc.fin = Some(horodatage);
+                    } else if s.panne >= SEUIL_PANNE {
+                        inc.panne = true; // une lenteur devenue panne
+                    }
+                }
+                None => {
+                    let panne = s.panne >= SEUIL_PANNE;
+                    if panne || s.lenteur >= SEUIL_LENTEUR {
+                        let suite = if panne { s.panne } else { s.lenteur } as i64;
+                        let debut = horodatage - INTERVALLE.as_secs() as i64 * (suite - 1);
+                        donnees.incidents.push(Incident { service: nom.to_string(), panne, debut, fin: None });
+                    }
+                }
+            }
+        }
+        // ménage : jours au-delà de l'historique, incidents de plus de 90 jours
+        let limite = (maintenant.date() - time::Duration::days(JOURS as i64)).to_string();
+        for jours in donnees.jours.values_mut() {
+            jours.retain(|d, _| *d > limite);
+        }
+        let limite_incidents = horodatage - JOURS_INCIDENTS * 86_400;
+        donnees.incidents.retain(|x| x.fin.unwrap_or(i64::MAX) >= limite_incidents);
+        drop(donnees);
+        let mut actuel = self.actuel.lock().unwrap();
+        for (i, m) in resultats.iter().enumerate() {
+            actuel[i] = Some(*m);
         }
         *self.derniere.lock().unwrap() = Some(SystemTime::now());
     }
 
     pub fn lignes(&self) -> Vec<Ligne> {
-        let mesures = self.mesures.lock().unwrap();
-        mesures
+        let donnees = self.donnees.lock().unwrap();
+        let actuel = self.actuel.lock().unwrap();
+        let today = aujourd_hui();
+        SERVICES
             .iter()
             .enumerate()
-            .map(|(index, file)| {
-                let mut historique: Vec<Option<Etat>> = vec![None; HISTORIQUE - file.len()];
-                historique.extend(file.iter().map(|m| Some(m.etat)));
-                let dispo = (!file.is_empty()).then(|| {
-                    file.iter().filter(|m| m.etat != Etat::HorsLigne).count() as f32 * 100.0 / file.len() as f32
-                });
-                Ligne { index, actuel: file.back().copied(), historique, dispo }
+            .map(|(index, s)| {
+                let jours = donnees.jours.get(s.nom);
+                let historique: Vec<(Date, Option<Jour>)> = (0..JOURS)
+                    .rev()
+                    .map(|n| {
+                        let d = today - time::Duration::days(n as i64);
+                        (d, jours.and_then(|j| j.get(&d.to_string())).copied())
+                    })
+                    .collect();
+                let somme = historique.iter().filter_map(|(_, j)| *j).fold(Jour::default(), Jour::plus);
+                let dispo = (somme.total() > 0).then(|| somme.dispo());
+                Ligne { index, actuel: actuel[index], historique, dispo }
             })
             .collect()
+    }
+
+    /// Disponibilité de tous les services sur 30 jours, en %.
+    pub fn dispo_globale(&self) -> Option<f32> {
+        let donnees = self.donnees.lock().unwrap();
+        let somme = donnees.jours.values().flat_map(|j| j.values()).copied().fold(Jour::default(), Jour::plus);
+        (somme.total() > 0).then(|| somme.dispo())
+    }
+
+    /// Incidents des 90 derniers jours, les plus récents d'abord.
+    pub fn incidents(&self) -> Vec<Incident> {
+        let mut liste = self.donnees.lock().unwrap().incidents.clone();
+        liste.sort_by(|a, b| b.debut.cmp(&a.debut));
+        liste
     }
 
     /// Secondes depuis la dernière vérification.
@@ -205,14 +381,53 @@ async fn verifier(http: &reqwest::Client, url: &str) -> Mesure {
 mod tests {
     use super::*;
 
+    fn tour(etat_premier: Etat) -> Vec<Mesure> {
+        let mut v = vec![Mesure { etat: Etat::EnLigne, latence: None }; SERVICES.len()];
+        v[0].etat = etat_premier;
+        v
+    }
+
+    fn status_vide(nom: &str) -> Status {
+        let f = std::env::temp_dir().join(nom);
+        let _ = std::fs::remove_file(&f);
+        Status::avec_fichier(f)
+    }
+
     #[test]
-    fn historique_complete_a_gauche() {
-        let s = Status::new();
-        s.mesures.lock().unwrap()[0].push_back(Mesure { etat: Etat::EnLigne, latence: None });
+    fn historique_par_jour() {
+        let s = status_vide("misty-status-test-jours.json");
+        s.enregistrer(&tour(Etat::EnLigne), OffsetDateTime::now_utc());
         let l = &s.lignes()[0];
-        assert_eq!(l.historique.len(), HISTORIQUE);
-        assert_eq!(l.historique.last(), Some(&Some(Etat::EnLigne)));
+        assert_eq!(l.historique.len(), JOURS);
+        assert_eq!(l.historique.last().unwrap().0, aujourd_hui());
+        assert_eq!(l.historique.last().unwrap().1, Some(Jour { up: 1, slow: 0, down: 0 }));
+        assert!(l.historique[0].1.is_none());
         assert_eq!(l.dispo, Some(100.0));
-        assert!(s.lignes()[1].dispo.is_none());
+        assert_eq!(s.dispo_globale(), Some(100.0));
+    }
+
+    #[test]
+    fn incident_ouvert_puis_resolu() {
+        let s = status_vide("misty-status-test-incidents.json");
+        let t0 = OffsetDateTime::now_utc();
+        let minute = time::Duration::minutes(1);
+        s.enregistrer(&tour(Etat::HorsLigne), t0);
+        assert!(s.incidents().is_empty(), "une seule erreur ne suffit pas");
+        s.enregistrer(&tour(Etat::HorsLigne), t0 + minute);
+        let inc = s.incidents();
+        assert_eq!(inc.len(), 1);
+        assert!(inc[0].panne && inc[0].fin.is_none());
+        assert_eq!(inc[0].debut, t0.unix_timestamp());
+        s.enregistrer(&tour(Etat::EnLigne), t0 + time::Duration::minutes(2));
+        s.enregistrer(&tour(Etat::EnLigne), t0 + time::Duration::minutes(3));
+        assert_eq!(s.incidents()[0].fin, Some((t0 + time::Duration::minutes(3)).unix_timestamp()));
+    }
+
+    #[test]
+    fn couleur_des_jours() {
+        assert_eq!(Jour { up: 1440, slow: 0, down: 0 }.etat(), Etat::EnLigne);
+        assert_eq!(Jour { up: 1438, slow: 0, down: 2 }.etat(), Etat::EnLigne);
+        assert_eq!(Jour { up: 1380, slow: 0, down: 60 }.etat(), Etat::Lent);
+        assert_eq!(Jour { up: 700, slow: 0, down: 740 }.etat(), Etat::HorsLigne);
     }
 }
