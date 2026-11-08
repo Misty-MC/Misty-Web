@@ -1,16 +1,21 @@
-//! Boutique de cosmétiques : pour l'instant, on choisit son pseudo Minecraft
-//! puis la page annonce l'ouverture prochaine.
+//! Boutique de cosmétiques.
+//!
+//! - Sans pseudo : formulaire, avec Steve en 3D à côté (aperçu en direct pendant la saisie).
+//! - Avec un pseudo : le studio. À gauche, le skin du joueur en 3D (vues face / profil / dos,
+//!   animations, sa vraie cape, élytres) ; à droite, sa fiche et les catégories de
+//!   cosmétiques, toutes « bientôt disponibles », avec la cape et les élytres Misty à essayer.
 
 use super::icons;
 use super::layout::{self, Head, Page};
+use crate::i18n::Tr;
 use maud::{Markup, html};
 
 /// Ce que la page affiche.
 pub enum ShopView<'a> {
     /// Formulaire du pseudo (avec la saisie précédente et, si besoin, l'erreur).
     Form { value: &'a str, invalid: bool },
-    /// Pseudo choisi : « bientôt disponible ».
-    Soon { player: &'a str },
+    /// Le studio du joueur choisi.
+    Studio { player: &'a str },
 }
 
 /// Pseudo Minecraft valide : 3 à 16 caractères, lettres ASCII, chiffres et `_`.
@@ -18,37 +23,105 @@ pub fn valid_username(name: &str) -> bool {
     (3..=16).contains(&name.len()) && name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_')
 }
 
+/// Catégories de cosmétiques (inspirées des grandes boutiques de cosmétiques Minecraft).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Category {
+    Capes,
+    Wings,
+    Headwear,
+    Bodywear,
+    Auras,
+    Pets,
+    Emotes,
+    Bundles,
+}
+
+impl Category {
+    const ALL: [Category; 8] = [
+        Category::Capes,
+        Category::Wings,
+        Category::Headwear,
+        Category::Bodywear,
+        Category::Auras,
+        Category::Pets,
+        Category::Emotes,
+        Category::Bundles,
+    ];
+
+    fn slug(self) -> &'static str {
+        match self {
+            Category::Capes => "capes",
+            Category::Wings => "wings",
+            Category::Headwear => "headwear",
+            Category::Bodywear => "bodywear",
+            Category::Auras => "auras",
+            Category::Pets => "pets",
+            Category::Emotes => "emotes",
+            Category::Bundles => "bundles",
+        }
+    }
+
+    fn text(self, tr: &Tr) -> (&str, &str) {
+        match self {
+            Category::Capes => (&tr.shop_cat_capes, &tr.shop_cat_capes_p),
+            Category::Wings => (&tr.shop_cat_wings, &tr.shop_cat_wings_p),
+            Category::Headwear => (&tr.shop_cat_hats, &tr.shop_cat_hats_p),
+            Category::Bodywear => (&tr.shop_cat_bodywear, &tr.shop_cat_bodywear_p),
+            Category::Auras => (&tr.shop_cat_effects, &tr.shop_cat_effects_p),
+            Category::Pets => (&tr.shop_cat_pets, &tr.shop_cat_pets_p),
+            Category::Emotes => (&tr.shop_cat_emotes, &tr.shop_cat_emotes_p),
+            Category::Bundles => (&tr.shop_cat_bundles, &tr.shop_cat_bundles_p),
+        }
+    }
+
+    fn icon(self) -> Markup {
+        match self {
+            Category::Capes => icons::cape(),
+            Category::Wings => icons::wings(),
+            Category::Headwear => icons::crown(),
+            Category::Bodywear => icons::shirt(),
+            Category::Auras => icons::sparkles(),
+            Category::Pets => icons::paw(),
+            Category::Emotes => icons::smile(),
+            Category::Bundles => icons::package(),
+        }
+    }
+}
+
 pub fn render(p: &Page, view: ShopView) -> Markup {
     let tr = p.tr;
-    // Le personnage qui se promène dans la forêt : le skin du joueur choisi, sinon Steve.
-    let (skin, tag) = match &view {
-        ShopView::Soon { player } => (*player, Some(*player)),
-        ShopView::Form { value, .. } if valid_username(value) => (*value, Some(*value)),
-        ShopView::Form { .. } => ("MHF_Steve", None),
-    };
-    let main = html! {
-        (walker(skin, tag))
-        section.hero.pn-hero.shop-hero {
-            div.wrap { div.pn-copy {
-                div.tags { span { (icons::bag()) (tr.shop_label) } }
-                h1 { (tr.shop_h1_1) br; span.accent { (tr.shop_h1_2) } }
-                p.sub { (tr.shop_sub) }
-                @match view {
-                    ShopView::Form { value, invalid } => { (form(p, value, invalid)) }
-                    ShopView::Soon { player } => { (soon(p, player)) }
-                }
-            } }
-        }
-        section.sec.shop-cats {
-            div.wrap {
-                div.cats {
-                    (category(icons::cape(), &tr.shop_cat_capes, &tr.shop_cat_capes_p, &tr.shop_badge))
-                    (category(icons::crown(), &tr.shop_cat_hats, &tr.shop_cat_hats_p, &tr.shop_badge))
-                    (category(icons::wings(), &tr.shop_cat_wings, &tr.shop_cat_wings_p, &tr.shop_badge))
-                    (category(icons::sparkles(), &tr.shop_cat_effects, &tr.shop_cat_effects_p, &tr.shop_badge))
+    let main = match view {
+        ShopView::Form { value, invalid } => {
+            let preview = valid_username(value).then_some(value);
+            html! {
+                section.hero.pn-hero.shop-hero {
+                    div.wrap.shop-grid {
+                        div.pn-copy {
+                            div.tags { span { (icons::bag()) (tr.shop_label) } }
+                            h1 { (tr.shop_h1_1) br; span.accent { (tr.shop_h1_2) } }
+                            p.sub { (tr.shop_sub) }
+                            (form(p, value, invalid))
+                        }
+                        (stage(p, preview.unwrap_or("MHF_Steve"), preview, false))
+                    }
                 }
             }
         }
+        ShopView::Studio { player } => html! {
+            section.studio {
+                div.wrap {
+                    nav.crumbs aria-label="Breadcrumb" {
+                        a href="/shop" { (icons::bag()) (tr.shop_label) }
+                        span { "/" }
+                        span { (player) }
+                    }
+                    div.studio-grid {
+                        (stage(p, player, Some(player), true))
+                        (locker(p, player))
+                    }
+                }
+            }
+        },
     };
     layout::render(
         p,
@@ -57,32 +130,105 @@ pub fn render(p: &Page, view: ShopView) -> Markup {
             description: &tr.shop_sub,
             jsonld: None,
             css: &["home", "patch-notes", "shop"],
+            scripts: &["/vendor/skinview3d/skinview3d.bundle.js"],
             body_class: "shop",
         },
         main,
     )
 }
 
-/// Personnage en pixel art construit avec les faces du skin (vue de profil) : il marche dans
-/// la forêt du fond, fait demi-tour au bout et saute quand on clique dessus.
-/// Le skin vient de mc-heads.net ; le nom est déjà validé, il ne contient que [A-Za-z0-9_].
-fn walker(skin: &str, tag: Option<&str>) -> Markup {
-    let style = format!("--skin:url('https://mc-heads.net/skin/{skin}')");
+/// Aperçu 3D (skinview3d) : vues, animations, cape et élytres.
+/// Le skin et la cape sont relayés par le serveur (`/skin/…`, `/cape/…`, `/player/…`).
+fn stage(p: &Page, skin: &str, name: Option<&str>, studio: bool) -> Markup {
+    let tr = p.tr;
+    let anims = [
+        ("idle", &tr.shop_anim_idle),
+        ("walk", &tr.shop_anim_walk),
+        ("run", &tr.shop_anim_run),
+        ("fly", &tr.shop_anim_fly),
+        ("wave", &tr.shop_anim_wave),
+        ("crouch", &tr.shop_anim_crouch),
+    ];
     html! {
-        div.walker-track aria-hidden="true" {
-            div.walker #walker style=(style) {
-                span.nametag hidden[tag.is_none()] { (tag.unwrap_or("")) }
-                div.flip {
-                    div.figure {
-                        div.part.arm.back {}
-                        div.part.leg.back {}
-                        div.part.body {}
-                        div.part.leg.front {}
-                        div.part.arm.front {}
-                        div.part.head { div.hat {} }
+        div.stage.studio-stage[studio] #stage data-skin=(skin) data-name=(name.unwrap_or("")) {
+            div.stage-top {
+                div.seg role="group" aria-label=(tr.shop_view) {
+                    button type="button" data-view="front" aria-pressed="true" { (tr.shop_view_front) }
+                    button type="button" data-view="side" aria-pressed="false" { (tr.shop_view_side) }
+                    button type="button" data-view="back" aria-pressed="false" { (tr.shop_view_back) }
+                }
+                button.toggle type="button" data-toggle="rotate" aria-pressed="true" { (icons::refresh()) span { (tr.shop_rotate) } }
+            }
+            div.halo aria-hidden="true" {}
+            div.circle aria-hidden="true" { span {} span {} span {} }
+            div.motes aria-hidden="true" { @for _ in 0..10 { i {} } }
+            canvas #skin3d role="img" aria-label=(tr.shop_preview) {}
+            div.stage-bar {
+                div.seg.anims role="group" aria-label=(tr.shop_anim) {
+                    @for (key, label) in anims {
+                        button type="button" data-anim=(key) aria-pressed=(if key == "walk" { "true" } else { "false" }) { (label) }
                     }
                 }
-                span.shadow {}
+                div.toggles {
+                    button.toggle type="button" data-toggle="cape" aria-pressed="false" disabled title=(tr.shop_no_cape) { (icons::cape()) span { (tr.shop_own_cape) } }
+                    button.toggle type="button" data-toggle="elytra" aria-pressed="false" { (icons::wings()) span { (tr.shop_elytra) } }
+                }
+            }
+            p.drag { (tr.shop_drag) }
+        }
+    }
+}
+
+/// Fiche du joueur et catégories de cosmétiques.
+fn locker(p: &Page, player: &str) -> Markup {
+    let tr = p.tr;
+    html! {
+        aside.locker {
+            div.pcard {
+                img.head src=(format!("https://mc-heads.net/avatar/{player}/96")) alt="" width="64" height="64";
+                div.pinfo {
+                    h1 #pname { (player) }
+                    div.pmeta {
+                        span.chip #pmodel data-classic=(tr.shop_model_classic) data-slim=(tr.shop_model_slim) { (tr.shop_model_classic) }
+                        span.chip.soon { i.dot {} (tr.shop_soon) }
+                    }
+                    button.uuid #puuid type="button" title=(tr.shop_copy_uuid) data-copied=(tr.shop_copied) hidden {
+                        code {} (icons::copy())
+                    }
+                    p.pmissing #pmissing hidden { (tr.shop_not_found) }
+                }
+            }
+            div.plinks {
+                a href=(format!("https://namemc.com/profile/{player}")) target="_blank" rel="noopener" { (tr.shop_namemc) (icons::external()) }
+                a href="/shop?change=1" { (tr.shop_change) }
+            }
+
+            h2 { (tr.shop_cosmetics_t) }
+            p.muted { (tr.shop_cosmetics_p) }
+            div.cat-tabs role="tablist" aria-label=(tr.shop_cosmetics_t) {
+                @for (i, c) in Category::ALL.iter().enumerate() {
+                    button type="button" role="tab" id=(format!("tab-{}", c.slug())) aria-controls=(format!("cat-{}", c.slug()))
+                        aria-selected=(if i == 0 { "true" } else { "false" }) data-cat=(c.slug()) {
+                        (c.icon()) span { (c.text(tr).0) }
+                    }
+                }
+            }
+            @for (i, c) in Category::ALL.iter().enumerate() {
+                @let (title, text) = c.text(tr);
+                div.cat-panel role="tabpanel" id=(format!("cat-{}", c.slug())) aria-labelledby=(format!("tab-{}", c.slug())) hidden[i != 0] {
+                    div.cat-head { h3 { (c.icon()) (title) } span.badge { (tr.shop_soon) } }
+                    p { (text) }
+                    div.slots {
+                        @for _ in 0..6 {
+                            div.slot { (c.icon()) span { (tr.shop_badge) } }
+                        }
+                    }
+                    @match c {
+                        Category::Capes => { button.btn.ghost.try-misty type="button" data-back="cape" { (icons::cape()) (tr.shop_try_misty_cape) } }
+                        Category::Wings => { button.btn.ghost.try-misty type="button" data-back="elytra" { (icons::wings()) (tr.shop_try_misty_elytra) } }
+                        _ => {}
+                    }
+                }
             }
         }
     }
@@ -106,35 +252,6 @@ fn form(p: &Page, value: &str, invalid: bool) -> Markup {
             } @else {
                 p.help #player-help { (tr.shop_hint) }
             }
-        }
-    }
-}
-
-fn soon(p: &Page, player: &str) -> Markup {
-    let tr = p.tr;
-    let (before, after) = tr
-        .shop_hello
-        .split_once("{name}")
-        .unwrap_or((&tr.shop_hello, ""));
-    html! {
-        div.shop-card {
-            img.head src=(format!("https://mc-heads.net/avatar/{player}/96")) alt=(player) width="72" height="72" loading="lazy";
-            div {
-                p.hello { (before) strong { (player) } (after) }
-                span.soon { i.dot {} (tr.shop_soon) }
-                p.muted { (tr.shop_soon_p) }
-                a.link href="/shop?change=1" { (tr.shop_change) }
-            }
-        }
-    }
-}
-
-fn category(icon: Markup, title: &str, text: &str, badge: &str) -> Markup {
-    html! {
-        div.cat.reveal {
-            span.ico { (icon) }
-            h3 { (title) span.badge { (badge) } }
-            p { (text) }
         }
     }
 }

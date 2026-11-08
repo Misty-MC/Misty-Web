@@ -72,6 +72,7 @@ pub fn render(p: &Page, releases: Option<&[Release]>, filter: Filter) -> Markup 
             description: &tr.pn_sub,
             jsonld: None,
             css: &["home", "patch-notes"],
+            scripts: &[],
             body_class: "notes",
         },
         main,

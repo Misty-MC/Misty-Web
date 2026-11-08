@@ -22,6 +22,7 @@ pub fn render(p: &Page) -> Markup {
             description: &tr.nf_text,
             jsonld: None,
             css: &["home", "patch-notes"],
+            scripts: &[],
             body_class: "notes",
         },
         main,

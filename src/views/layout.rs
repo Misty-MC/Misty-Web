@@ -49,6 +49,8 @@ pub struct Head<'a> {
     pub jsonld: Option<String>,
     /// Feuilles de style propres à la page, en plus de base.css et layout.css.
     pub css: &'a [&'a str],
+    /// Scripts propres à la page, chargés avant site.js.
+    pub scripts: &'a [&'a str],
     pub body_class: &'a str,
 }
 
@@ -100,6 +102,7 @@ pub fn render(p: &Page, head: Head, main: Markup) -> Markup {
                 link rel="stylesheet" href=(format!("/css/layout.css?v={v}"));
                 @for css in head.css { link rel="stylesheet" href=(format!("/css/{css}.css?v={v}")); }
                 script { (PreEscaped("document.documentElement.classList.add('js')")) }
+                @for js in head.scripts { script src=(format!("{js}?v={v}")) defer {} }
                 script src=(format!("/js/site.js?v={v}")) defer {}
             }
             body class=(head.body_class) {

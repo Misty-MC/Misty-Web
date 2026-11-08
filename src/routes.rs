@@ -4,6 +4,7 @@ use crate::AppState;
 use crate::docs;
 use crate::github::{self, Kind};
 use crate::i18n::{self, Lang};
+use crate::skins;
 use crate::views::docs as docs_view;
 use crate::views::shop::{self, ShopView};
 use crate::views::{home, layout::Page, not_found, patch_notes};
@@ -157,7 +158,7 @@ pub async fn shop(
 
     let (view, new_player) = match (typed, q.change.is_some(), saved) {
         (Some(name), _, _) if shop::valid_username(name) => {
-            (ShopView::Soon { player: name }, Some(name))
+            (ShopView::Studio { player: name }, Some(name))
         }
         (Some(name), _, _) => (
             ShopView::Form {
@@ -166,7 +167,7 @@ pub async fn shop(
             },
             None,
         ),
-        (None, false, Some(name)) => (ShopView::Soon { player: name }, None),
+        (None, false, Some(name)) => (ShopView::Studio { player: name }, None),
         (None, _, saved) => (
             ShopView::Form {
                 value: saved.unwrap_or(""),
@@ -183,6 +184,74 @@ pub async fn shop(
         }
     }
     res
+}
+
+fn texture_response(png: axum::body::Bytes) -> Response {
+    let mut res = Body::from(png).into_response();
+    let h = res.headers_mut();
+    h.insert(header::CONTENT_TYPE, HeaderValue::from_static("image/png"));
+    h.insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("public, max-age=600"),
+    );
+    res
+}
+
+async fn lookup_player(state: &AppState, name: &str) -> Result<Arc<skins::Profile>, Response> {
+    let name = name.strip_suffix(".png").unwrap_or(name);
+    if !shop::valid_username(name) {
+        return Err((StatusCode::NOT_FOUND, "Pseudo invalide").into_response());
+    }
+    match state.skins.lookup(state.github.http(), name).await {
+        skins::Lookup::Found(p) => Ok(p),
+        skins::Lookup::NotFound => {
+            Err((StatusCode::NOT_FOUND, "Joueur introuvable").into_response())
+        }
+        skins::Lookup::Unavailable => {
+            Err((StatusCode::BAD_GATEWAY, "Skin indisponible").into_response())
+        }
+    }
+}
+
+/// `/skin/<pseudo>` (ou `/skin/<pseudo>.png`) : le skin du joueur, relayé depuis le site
+/// pour que l'aperçu 3D puisse le lire.
+pub async fn skin(State(state): State<Arc<AppState>>, Path(name): Path<String>) -> Response {
+    match lookup_player(&state, &name).await {
+        Ok(p) => texture_response(p.skin.clone()),
+        Err(res) => res,
+    }
+}
+
+/// `/cape/<pseudo>` : la cape Mojang du joueur, s'il en a une.
+pub async fn cape(State(state): State<Arc<AppState>>, Path(name): Path<String>) -> Response {
+    match lookup_player(&state, &name).await {
+        Ok(p) => match &p.cape {
+            Some(cape) => texture_response(cape.clone()),
+            None => (StatusCode::NOT_FOUND, "Pas de cape").into_response(),
+        },
+        Err(res) => res,
+    }
+}
+
+/// `/player/<pseudo>` : pseudo exact, UUID, modèle de bras et présence d'une cape (JSON).
+pub async fn player(State(state): State<Arc<AppState>>, Path(name): Path<String>) -> Response {
+    match lookup_player(&state, &name).await {
+        Ok(p) => {
+            let mut res = Json(serde_json::json!({
+                "name": p.name,
+                "uuid": p.uuid.as_deref().map(skins::dashed_uuid),
+                "slim": p.slim,
+                "cape": p.cape.is_some(),
+            }))
+            .into_response();
+            res.headers_mut().insert(
+                header::CACHE_CONTROL,
+                HeaderValue::from_static("public, max-age=600"),
+            );
+            res
+        }
+        Err(res) => res,
+    }
 }
 
 pub async fn robots(State(state): State<Arc<AppState>>) -> Response {

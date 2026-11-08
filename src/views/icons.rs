@@ -44,6 +44,20 @@ pub fn sparkles() -> Markup {
         r#"<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>"#,
     )
 }
+pub fn shirt() -> Markup {
+    icon(r#"<path d="M8 3l4 2 4-2 5 4-3 3-2-1v12H8V9l-2 1-3-3z"/>"#)
+}
+pub fn paw() -> Markup {
+    icon(
+        r#"<circle cx="6" cy="10" r="2"/><circle cx="10" cy="5.5" r="2"/><circle cx="14" cy="5.5" r="2"/><circle cx="18" cy="10" r="2"/><path d="M8 17c0-3 2-5 4-5s4 2 4 5a2.5 2.5 0 0 1-4 2 2.5 2.5 0 0 1-4-2z"/>"#,
+    )
+}
+pub fn smile() -> Markup {
+    icon(r#"<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>"#)
+}
+pub fn copy() -> Markup {
+    icon(r#"<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>"#)
+}
 pub fn menu() -> Markup {
     icon(r#"<path d="M4 6h16M4 12h16M4 18h16"/>"#)
 }
