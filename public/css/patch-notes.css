@@ -28,9 +28,9 @@
 .rel summary>.ic{color:var(--dim);transition:transform .25s}
 .rel[open] summary>.ic{transform:rotate(180deg);color:var(--accent)}
 .dot{width:8px;height:8px;border-radius:2px;background:var(--dim)}
-.dot.on{background:var(--green);box-shadow:0 0 0 3px rgba(37,212,108,.18),0 0 10px var(--green)}
+.dot.on{background:var(--green);box-shadow:0 0 0 3px rgba(122,168,255,.18),0 0 10px var(--green)}
 .badge{font-family:var(--pix);font-size:9.5px;letter-spacing:.04em;padding:4px 8px;border-radius:6px;background:var(--panel-2);border:1px solid var(--line-2);color:var(--muted);white-space:nowrap}
-.badge.latest{background:rgba(37,212,108,.14);border-color:rgba(37,212,108,.4);color:#7ff0ad}
+.badge.latest{background:rgba(122,168,255,.14);border-color:rgba(122,168,255,.4);color:#bcd4ff}
 .badge.pre{background:rgba(255,190,90,.1);border-color:rgba(255,190,90,.35);color:#ffcf85}
 .rt{display:flex;flex-direction:column;min-width:0}
 .rt strong{font-size:16.5px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

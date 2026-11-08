@@ -190,7 +190,6 @@ fn locker(p: &Page, player: &str) -> Markup {
                     h1 #pname { (player) }
                     div.pmeta {
                         span.chip #pmodel data-classic=(tr.shop_model_classic) data-slim=(tr.shop_model_slim) { (tr.shop_model_classic) }
-                        span.chip.soon { i.dot {} (tr.shop_soon) }
                     }
                     button.uuid #puuid type="button" title=(tr.shop_copy_uuid) data-copied=(tr.shop_copied) hidden {
                         code {} (icons::copy())
@@ -218,15 +217,27 @@ fn locker(p: &Page, player: &str) -> Markup {
                 div.cat-panel role="tabpanel" id=(format!("cat-{}", c.slug())) aria-labelledby=(format!("tab-{}", c.slug())) hidden[i != 0] {
                     div.cat-head { h3 { (c.icon()) (title) } span.badge { (tr.shop_soon) } }
                     p { (text) }
+                    @let item = match c {
+                        Category::Capes => Some(("cape", &tr.shop_item_cape)),
+                        Category::Wings => Some(("elytra", &tr.shop_item_elytra)),
+                        _ => None,
+                    };
                     div.slots {
-                        @for _ in 0..6 {
+                        // Première case : l'article Misty à essayer, s'il y en a un dans cette catégorie.
+                        @if let Some((back, name)) = item {
+                            div.slot.item {
+                                canvas.thumb data-thumb=(back) width="60" height="96" aria-hidden="true" {}
+                                strong { (name) }
+                                button.btn.play.sm.equip type="button" data-back=(back) aria-pressed="false"
+                                    data-equip=(tr.shop_equip) data-unequip=(tr.shop_unequip) { (tr.shop_equip) }
+                            }
+                        }
+                        @for _ in 0..(if item.is_some() { 5 } else { 6 }) {
                             div.slot { (c.icon()) span { (tr.shop_badge) } }
                         }
                     }
-                    @match c {
-                        Category::Capes => { button.btn.ghost.try-misty type="button" data-back="cape" { (icons::cape()) (tr.shop_try_misty_cape) } }
-                        Category::Wings => { button.btn.ghost.try-misty type="button" data-back="elytra" { (icons::wings()) (tr.shop_try_misty_elytra) } }
-                        _ => {}
+                    @if item.is_some() {
+                        p.equip-warn role="status" hidden { (icons::alert()) span { (tr.shop_unsupported) } }
                     }
                 }
             }
