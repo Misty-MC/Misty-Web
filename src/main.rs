@@ -18,6 +18,7 @@ mod routes;
 mod scene;
 mod seo;
 mod skins;
+mod status;
 mod views;
 
 use axum::Router;
@@ -29,7 +30,9 @@ use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 
 pub struct AppState {
-    pub github: github::GitHub,
+    pub github: Arc<github::GitHub>,
+    /// Page de statut : vérifications des services, faites en arrière-plan.
+    pub status: Arc<status::Status>,
     /// Paysage de fond, le même sur toutes les pages.
     pub scene: String,
     /// Adresse publique du site, sans `/` final.
@@ -53,11 +56,12 @@ async fn main() {
     docs::init();
 
     let state = Arc::new(AppState {
-        github: github::GitHub::new(
+        github: Arc::new(github::GitHub::new(
             env_or("GITHUB_API", "https://api.github.com"),
             env_or("MISTY_REPO", "Misty-MC/Misty"),
             std::env::var("GITHUB_TOKEN").ok().filter(|t| !t.is_empty()),
-        ),
+        )),
+        status: Arc::new(status::Status::new()),
         scene: scene::render(&scene::SceneOptions {
             seed: 7,
             moon_x: 0.8,
@@ -69,6 +73,10 @@ async fn main() {
             .trim_end_matches('/')
             .to_string(),
     });
+
+    // Tâches de fond : releases GitHub (les pages ne lisent que le cache) et page de statut
+    tokio::spawn(state.github.clone().rafraichir_en_boucle());
+    tokio::spawn(state.status.clone().verifier_en_boucle());
 
     let static_files = ServeDir::new(env_or("MISTY_PUBLIC_DIR", "public"))
         .not_found_service(get(routes::not_found).with_state(state.clone()));
@@ -91,6 +99,8 @@ async fn main() {
         .route("/docs", get(routes::docs_index))
         .route("/docs/search.json", get(routes::docs_search_index))
         .route("/docs/{slug}", get(routes::docs_page))
+        .route("/status", get(routes::status_page))
+        .route("/status.json", get(routes::status_json))
         .route("/api/latest", get(routes::api_latest))
         .route("/download/{kind}", get(routes::download))
         .fallback_service(static_files)

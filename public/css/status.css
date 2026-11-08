@@ -1,0 +1,51 @@
+/* Page de statut (chargée après home.css et patch-notes.css, dont elle réutilise le hero). */
+
+.status{padding-top:8px}
+.st-banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:18px 22px;border-radius:16px;background:var(--panel);border:1px solid var(--line-2);box-shadow:0 4px 0 #060a14,0 24px 50px -24px rgba(0,0,0,.6)}
+.st-banner strong{font-size:18px;font-weight:700}
+.st-banner .st-age{margin-left:auto;font-size:13.5px;color:var(--dim)}
+.st-banner.up{border-color:rgba(29,224,98,.35)}
+.st-banner.slow{border-color:rgba(255,190,90,.45)}
+.st-banner.down{border-color:rgba(255,110,110,.5)}
+
+.st-dot{width:11px;height:11px;border-radius:3px;flex:none;background:var(--dim)}
+.up>.st-dot,.st-dot.up{background:#1de062;box-shadow:0 0 10px rgba(29,224,98,.7);animation:pulse 2s ease-in-out infinite}
+.slow>.st-dot,.st-dot.slow{background:#ffbe5a;box-shadow:0 0 10px rgba(255,190,90,.7)}
+.down>.st-dot,.st-dot.down{background:#ff6e6e;box-shadow:0 0 10px rgba(255,110,110,.7);animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.4}}
+
+.st-group{margin-top:34px}
+.st-group h2{font-family:var(--pix);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+.st-list{border-radius:16px;background:rgba(17,26,48,.72);border:1px solid var(--line-2);overflow:hidden}
+.st-row{display:grid;grid-template-columns:minmax(200px,1.1fr) minmax(0,2fr) auto;align-items:center;gap:20px;padding:14px 20px;border-top:1px solid var(--line)}
+.st-row:first-child{border-top:0}
+.st-row:hover{background:rgba(255,255,255,.02)}
+.st-name{display:flex;align-items:center;gap:12px;min-width:0}
+.st-name div{display:flex;flex-direction:column;min-width:0}
+.st-name strong{font-size:15px;font-weight:650}
+.st-name span{font-size:12.5px;color:var(--dim)}
+
+/* Historique : une barre par vérification (la plus récente à droite) */
+.st-bars{display:flex;gap:2px;height:26px;align-items:stretch}
+.st-bars i{flex:1;min-width:2px;border-radius:2px;background:rgba(255,255,255,.07);transition:transform .15s}
+.st-bars i.up{background:#1de062;opacity:.75}
+.st-bars i.slow{background:#ffbe5a}
+.st-bars i.down{background:#ff6e6e}
+.st-bars i:hover{transform:scaleY(1.15)}
+
+.st-meta{display:flex;flex-direction:column;align-items:flex-end;gap:2px;white-space:nowrap}
+.st-state{font-family:var(--pix);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
+.st-state.up{color:#1de062}
+.st-state.slow{color:#ffbe5a}
+.st-state.down{color:#ff6e6e}
+.st-state.wait{color:var(--dim)}
+.st-num{font-size:12.5px;color:var(--dim)}
+
+.st-how{margin-top:28px;font-size:13.5px;color:var(--dim);max-width:760px}
+.st-how a{color:var(--accent)}
+
+@media (max-width:760px){
+  .st-row{grid-template-columns:1fr auto;gap:10px 14px}
+  .st-bars{grid-column:1/-1;order:3;height:20px}
+  .st-banner .st-age{margin-left:0;width:100%}
+}

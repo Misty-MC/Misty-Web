@@ -7,6 +7,7 @@ use crate::i18n::{self, Lang};
 use crate::skins;
 use crate::views::docs as docs_view;
 use crate::views::shop::{self, ShopView};
+use crate::views::status as status_view;
 use crate::views::{home, layout::Page, not_found, patch_notes};
 use axum::body::Body;
 use axum::extract::{Path, Query, State};
@@ -388,5 +389,46 @@ pub async fn download(State(state): State<Arc<AppState>>, Path(kind): Path<Strin
             h.insert(name, v);
         }
     }
+    res
+}
+
+/// `/status` : état des services dont Misty a besoin (vérifiés par le site toutes les minutes).
+pub async fn status_page(
+    State(state): State<Arc<AppState>>,
+    Query(q): Query<PageQuery>,
+    headers: HeaderMap,
+) -> Response {
+    let (lang, remember) = i18n::negotiate(q.lang.as_deref(), &headers);
+    let count = state.github.releases().await.map(|l| l.len());
+    let p = page(&state, lang, "/status", count);
+    let markup = status_view::render(&p, &state.status.lignes(), state.status.age());
+    let mut res = html_response(StatusCode::OK, markup, lang, remember);
+    res.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    res
+}
+
+/// `/status.json` : la même chose pour les robots (et les curieux).
+pub async fn status_json(State(state): State<Arc<AppState>>) -> Response {
+    let services: Vec<_> = state
+        .status
+        .lignes()
+        .iter()
+        .map(|l| {
+            let s = &crate::status::SERVICES[l.index];
+            serde_json::json!({
+                "name": s.nom,
+                "url": s.url,
+                "state": l.actuel.map(|m| m.etat.slug()),
+                "latency_ms": l.actuel.and_then(|m| m.latence).map(|d| d.as_millis() as u64),
+                "uptime_percent": l.dispo,
+            })
+        })
+        .collect();
+    let mut res = Json(serde_json::json!({
+        "checked_seconds_ago": state.status.age(),
+        "services": services,
+    }))
+    .into_response();
+    res.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
     res
 }

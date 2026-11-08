@@ -173,6 +173,7 @@ fn mobile_menu(p: &Page) -> Markup {
                     (tr.nav_patch_notes)
                     @if let Some(n) = p.release_count { span.count { (n) } }
                 }
+                a href="/status" aria-current=[here("/status")] { (tr.nav_status) }
                 a href=(p.github_url()) target="_blank" rel="noopener" { "GitHub" (icons::external()) }
             }
         }
@@ -216,6 +217,7 @@ fn footer(p: &Page) -> Markup {
                             li { a href="/docs" { (tr.docs_label) } }
                             li { a href="/shop" { (tr.nav_shop) } }
                             li { a href="/patch-notes" { (tr.nav_patch_notes) } }
+                            li { a href="/status" { (tr.nav_status) } }
                         }
                     }
                     div {

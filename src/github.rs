@@ -1,12 +1,28 @@
-//! Accès aux releases GitHub du launcher, avec un cache en mémoire de quelques minutes.
+//! Accès aux releases GitHub du launcher.
+//!
+//! Les pages ne parlent jamais à GitHub : elles lisent un cache en mémoire, rafraîchi en arrière-plan
+//! (`rafraichir_en_boucle`). Ainsi une panne ou une lenteur de GitHub (502, 504, coupure réseau) ne
+//! ralentit ni ne bloque le site : on sert la dernière liste connue.
+//!
+//! - délai maximal par requête, et une seule requête à la fois ;
+//! - requêtes conditionnelles (ETag) : « rien n'a changé » ne coûte rien au quota de l'API ;
+//! - après un échec, attente croissante avant de réessayer (30 s, 1 min, 2 min… jusqu'à 10 min) ;
+//! - la dernière liste est gardée sur le disque : après un redémarrage, le site a ses données même si
+//!   GitHub ne répond pas ;
+//! - une ligne de journal quand GitHub tombe, une quand il revient (au lieu d'une par visite).
 
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use std::time::{Duration, Instant};
-use tokio::sync::Mutex;
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
-const CACHE_TTL: Duration = Duration::from_secs(120);
 const USER_AGENT: &str = "misty-site";
+/// Rafraîchissement normal.
+const RAFRAICHISSEMENT: Duration = Duration::from_secs(300);
+/// Attente maximale après des échecs répétés.
+const ATTENTE_MAX: Duration = Duration::from_secs(600);
+/// Délai maximal d'une requête vers GitHub.
+const DELAI_REQUETE: Duration = Duration::from_secs(8);
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Release {
@@ -77,27 +93,59 @@ impl Release {
     }
 }
 
+#[derive(Default)]
+struct Etat {
+    liste: Option<Arc<Vec<Release>>>,
+    etag: Option<String>,
+    /// Échecs consécutifs (0 = la dernière tentative a réussi, ou aucune tentative encore)
+    echecs: u32,
+}
+
 pub struct GitHub {
     http: reqwest::Client,
     api_base: String,
     repo: String,
     token: Option<String>,
-    cache: Mutex<Option<(Instant, Arc<Vec<Release>>)>>,
+    etat: Mutex<Etat>,
+    /// Une seule requête vers GitHub à la fois
+    requete: tokio::sync::Mutex<()>,
+    fichier_cache: PathBuf,
+}
+
+enum Reponse {
+    Nouvelle(Vec<Release>, Option<String>),
+    Inchangee,
 }
 
 impl GitHub {
     pub fn new(api_base: String, repo: String, token: Option<String>) -> Self {
         let http = reqwest::Client::builder()
             .user_agent(USER_AGENT)
-            .connect_timeout(Duration::from_secs(10))
+            .connect_timeout(Duration::from_secs(5))
+            .timeout(DELAI_REQUETE)
             .build()
             .expect("client HTTP");
+        let fichier_cache = std::env::var_os("MISTY_CACHE_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(std::env::temp_dir)
+            .join("misty-site-releases.json");
+        let mut etat = Etat::default();
+        // Dernière liste connue (redémarrage) : servie tout de suite, rafraîchie ensuite
+        if let Some(liste) = std::fs::read(&fichier_cache)
+            .ok()
+            .and_then(|o| serde_json::from_slice::<Vec<Release>>(&o).ok())
+            .filter(|l| !l.is_empty())
+        {
+            etat.liste = Some(Arc::new(liste));
+        }
         Self {
             http,
             api_base,
             repo,
             token,
-            cache: Mutex::new(None),
+            etat: Mutex::new(etat),
+            requete: tokio::sync::Mutex::new(()),
+            fichier_cache,
         }
     }
 
@@ -110,29 +158,77 @@ impl GitHub {
     }
 
     /// Toutes les releases publiées (sans les brouillons), les plus récentes d'abord.
-    /// En cas d'erreur, renvoie la dernière liste connue si elle existe.
+    /// Ne contacte GitHub que si on n'a encore aucune liste et qu'aucun échec n'est en cours
+    /// (premier démarrage), et jamais plus longtemps que le délai d'une requête.
     pub async fn releases(&self) -> Option<Arc<Vec<Release>>> {
-        let mut cache = self.cache.lock().await;
-        if let Some((at, list)) = cache.as_ref()
-            && at.elapsed() < CACHE_TTL
-        {
-            return Some(list.clone());
+        let (liste, echecs) = {
+            let e = self.etat.lock().unwrap();
+            (e.liste.clone(), e.echecs)
+        };
+        if liste.is_some() || echecs > 0 {
+            return liste;
         }
-        match self.fetch().await {
-            Ok(list) => {
-                let list = Arc::new(list);
-                *cache = Some((Instant::now(), list.clone()));
-                Some(list)
+        self.rafraichir().await;
+        self.etat.lock().unwrap().liste.clone()
+    }
+
+    /// Tâche de fond : rafraîchit la liste toutes les 5 minutes, et attend plus longtemps après des
+    /// échecs (sans jamais bloquer les pages).
+    pub async fn rafraichir_en_boucle(self: Arc<Self>) {
+        loop {
+            self.rafraichir().await;
+            let echecs = self.etat.lock().unwrap().echecs;
+            let attente = if echecs == 0 {
+                RAFRAICHISSEMENT
+            } else {
+                (Duration::from_secs(30) * 2u32.pow((echecs - 1).min(6))).min(ATTENTE_MAX)
+            };
+            tokio::time::sleep(attente).await;
+        }
+    }
+
+    async fn rafraichir(&self) {
+        let Ok(_verrou) = self.requete.try_lock() else {
+            // déjà en cours : on attend simplement son résultat
+            let _attente = self.requete.lock().await;
+            return;
+        };
+        let etag = self.etat.lock().unwrap().etag.clone();
+        let resultat = self.fetch(etag.as_deref()).await;
+        let mut e = self.etat.lock().unwrap();
+        match resultat {
+            Ok(reponse) => {
+                if e.echecs > 0 {
+                    eprintln!("GitHub de nouveau joignable (après {} échec(s))", e.echecs);
+                }
+                e.echecs = 0;
+                if let Reponse::Nouvelle(liste, etag) = reponse {
+                    if let Ok(json) = serde_json::to_vec(&liste) {
+                        let _ = std::fs::write(&self.fichier_cache, json);
+                    }
+                    e.liste = Some(Arc::new(liste));
+                    e.etag = etag;
+                }
             }
-            Err(e) => {
-                eprintln!("GitHub indisponible : {e}");
-                // On réessaiera au prochain appel ; en attendant, on sert l'ancienne liste.
-                cache.as_ref().map(|(_, list)| list.clone())
+            Err(err) => {
+                e.echecs += 1;
+                // une ligne au premier échec, puis une toutes les 10 tentatives
+                if e.echecs == 1 || e.echecs % 10 == 0 {
+                    let servie = if e.liste.is_some() {
+                        "on sert la dernière liste connue"
+                    } else {
+                        "aucune liste en cache"
+                    };
+                    eprintln!(
+                        "GitHub indisponible ({} échec(s) d'affilée, {servie}) : {err}",
+                        e.echecs
+                    );
+                }
             }
         }
     }
 
-    async fn fetch(&self) -> Result<Vec<Release>, reqwest::Error> {
+    async fn fetch(&self, etag: Option<&str>) -> Result<Reponse, reqwest::Error> {
         let url = format!(
             "{}/repos/{}/releases?per_page=100",
             self.api_base, self.repo
@@ -144,9 +240,22 @@ impl GitHub {
         if let Some(t) = &self.token {
             req = req.bearer_auth(t);
         }
-        let mut list: Vec<Release> = req.send().await?.error_for_status()?.json().await?;
-        list.retain(|r| !r.draft);
-        Ok(list)
+        if let Some(etag) = etag {
+            req = req.header("If-None-Match", etag);
+        }
+        let reponse = req.send().await?;
+        if reponse.status() == reqwest::StatusCode::NOT_MODIFIED {
+            return Ok(Reponse::Inchangee);
+        }
+        let reponse = reponse.error_for_status()?;
+        let etag = reponse
+            .headers()
+            .get("etag")
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_string);
+        let mut liste: Vec<Release> = reponse.json().await?;
+        liste.retain(|r| !r.draft);
+        Ok(Reponse::Nouvelle(liste, etag))
     }
 }
 
@@ -158,6 +267,7 @@ pub fn latest(list: &[Release]) -> Option<&Release> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Instant;
 
     #[test]
     fn asset_names() {
@@ -165,5 +275,25 @@ mod tests {
         assert!(!Kind::Setup.matches("Misty-0.3.1.zip"));
         assert!(Kind::Portable.matches("Misty-0.3.1.zip"));
         assert!(!Kind::Portable.matches("Misty-Setup-0.3.1.zip"));
+    }
+
+    /// GitHub injoignable : la première page attend au plus le délai d'une requête, les suivantes
+    /// répondent tout de suite (pas de nouvel essai à chaque visite).
+    #[tokio::test]
+    async fn panne_ne_bloque_pas_les_pages() {
+        let dossier = std::env::temp_dir().join("misty-site-test-panne");
+        let _ = std::fs::create_dir_all(&dossier);
+        let _ = std::fs::remove_file(dossier.join("misty-site-releases.json"));
+        // SAFETY : variable lue seulement par ce test, avant toute autre tâche.
+        unsafe { std::env::set_var("MISTY_CACHE_DIR", &dossier) };
+        let gh = GitHub::new("http://127.0.0.1:9".into(), "x/y".into(), None);
+        let debut = Instant::now();
+        assert!(gh.releases().await.is_none());
+        assert!(debut.elapsed() < DELAI_REQUETE + Duration::from_secs(2));
+        let debut = Instant::now();
+        for _ in 0..50 {
+            assert!(gh.releases().await.is_none());
+        }
+        assert!(debut.elapsed() < Duration::from_millis(50));
     }
 }
