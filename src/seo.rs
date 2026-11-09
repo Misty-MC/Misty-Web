@@ -95,7 +95,7 @@ pub fn doc_jsonld(site: &str, tr: &Tr, page: &docs::DocPage, lang: Lang) -> Stri
 
 pub fn robots_txt(site: &str) -> String {
     format!(
-        "User-agent: *\nAllow: /\nDisallow: /download/\nDisallow: /api/\n\nSitemap: {site}/sitemap.xml\n"
+        "User-agent: *\nAllow: /\nDisallow: /download/\nDisallow: /api/\nDisallow: /verify\n\nSitemap: {site}/sitemap.xml\n"
     )
 }
 

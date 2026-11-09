@@ -10,12 +10,15 @@
 //! - `GITHUB_API` (`https://api.github.com` par défaut) : utile pour tester avec une fausse API
 //! - `GITHUB_WEB` (`https://github.com` par défaut) : flux Atom et fichiers des releases
 //! - `MISTY_CACHE_DIR` (dossier temporaire par défaut) : caches, statut, copie des versions, télémétrie
+//! - `VERIFY_SECRET` et `DISCORD_TOKEN` (facultatifs) : captcha `/verify` de Misty Bot (même secret
+//!   que le bot, et le token du bot pour donner le rôle)
 //! - `DISCORD_WEBHOOK` (facultatif) : webhook d'un salon privé de l'équipe, qui reçoit les rapports
 //!   de logs et le résumé quotidien de la télémétrie
 //! - `TELEMETRY_TOKEN` (facultatif, 16 caractères ou plus) : ouvre la lecture de la télémétrie
 //!   (`/api/telemetry/summary`, `/api/telemetry/report/{code}`) avec `Authorization: Bearer …`
 
 mod discord;
+mod verify;
 mod docs;
 mod format;
 mod github;
@@ -56,6 +59,8 @@ pub struct AppState {
     pub telemetrie: Arc<telemetrie::Telemetrie>,
     /// Salon Discord de l'équipe (rapports, résumé du jour).
     pub discord: Arc<discord::Discord>,
+    /// Captcha de vérification des serveurs Discord qui utilisent Misty Bot.
+    pub verification: Arc<verify::Verification>,
 }
 
 fn env_or(key: &str, default: &str) -> String {
@@ -80,6 +85,7 @@ async fn main() {
         status: Arc::new(status::Status::new()),
         telemetrie: Arc::new(telemetrie::Telemetrie::new()),
         discord: Arc::new(discord::Discord::new()),
+        verification: Arc::new(verify::Verification::new()),
         scene: scene::render(&scene::SceneOptions {
             seed: 7,
             moon_x: 0.8,
@@ -123,6 +129,8 @@ async fn main() {
         .route("/status.json", get(routes::status_json))
         .route("/api/latest", get(routes::api_latest))
         .route("/download/{kind}", get(routes::download))
+        .route("/verify", get(routes::verify_page).post(routes::verify_submit))
+        .route("/verify/captcha/{file}", get(routes::verify_captcha))
         .route(
             "/api/telemetry",
             post(telemetrie::evenement).layer(DefaultBodyLimit::max(32 * 1024)),
