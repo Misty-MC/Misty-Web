@@ -10,7 +10,7 @@ pub const DISCORD_URL: &str = "https://discord.gg/rdQJUgvUh3";
 
 /// Ajouté aux adresses des CSS et du JS (`?v=`) : change à chaque démarrage du serveur,
 /// donc à chaque déploiement, pour que les navigateurs ne gardent pas d'anciennes versions en cache.
-static ASSET_VERSION: LazyLock<String> = LazyLock::new(|| {
+pub static ASSET_VERSION: LazyLock<String> = LazyLock::new(|| {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs().to_string())

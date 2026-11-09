@@ -286,3 +286,6 @@ vf_off_p = "La verificación aún no está configurada en este sitio. Avisa al s
 vf_many_p = "Demasiados intentos. Vuelve a pulsar Verificar en Discord para obtener un nuevo enlace."
 vf_role_title = "No se pudo dar el rol"
 vf_role_p = "El captcha es correcto, pero el bot no pudo darte el rol (falta el permiso Gestionar roles o el orden de roles). Avisa al staff del servidor."
+vf_loading = "Conectando con Discord…"
+vf_close = "Cerrar"
+vf_auth_p = "Discord no compartió tu cuenta. Cierra la actividad y vuelve a pulsar Verificar."

@@ -11,7 +11,8 @@
 //! - `GITHUB_WEB` (`https://github.com` par défaut) : flux Atom et fichiers des releases
 //! - `MISTY_CACHE_DIR` (dossier temporaire par défaut) : caches, statut, copie des versions, télémétrie
 //! - `VERIFY_SECRET` et `DISCORD_TOKEN` (facultatifs) : captcha `/verify` de Misty Bot (même secret
-//!   que le bot, et le token du bot pour donner le rôle)
+//!   que le bot, et le token du bot pour donner le rôle) ; `DISCORD_CLIENT_SECRET` en plus pour le
+//!   captcha dans Discord (Activité, page `/activity`)
 //! - `DISCORD_WEBHOOK` (facultatif) : webhook d'un salon privé de l'équipe, qui reçoit les rapports
 //!   de logs et le résumé quotidien de la télémétrie
 //! - `TELEMETRY_TOKEN` (facultatif, 16 caractères ou plus) : ouvre la lecture de la télémétrie
@@ -131,6 +132,11 @@ async fn main() {
         .route("/download/{kind}", get(routes::download))
         .route("/verify", get(routes::verify_page).post(routes::verify_submit))
         .route("/verify/captcha/{file}", get(routes::verify_captcha))
+        .route("/activity", get(routes::activity_page))
+        .route("/activity/start", post(routes::activity_start))
+        .route("/activity/new", post(routes::activity_new))
+        .route("/activity/answer", post(routes::activity_answer))
+        .route("/api/verify/config", post(routes::verify_config).layer(DefaultBodyLimit::max(4 * 1024)))
         .route(
             "/api/telemetry",
             post(telemetrie::evenement).layer(DefaultBodyLimit::max(32 * 1024)),

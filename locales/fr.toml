@@ -286,3 +286,6 @@ vf_off_p = "La vérification n'est pas encore configurée sur ce site. Préviens
 vf_many_p = "Trop d'essais. Clique de nouveau sur Vérifier dans Discord pour avoir un nouveau lien."
 vf_role_title = "Impossible de donner le rôle"
 vf_role_p = "Le captcha est réussi, mais le bot n'a pas pu te donner le rôle (permission Gérer les rôles manquante ou ordre des rôles). Préviens le staff du serveur."
+vf_loading = "Connexion à Discord…"
+vf_close = "Fermer"
+vf_auth_p = "Discord n'a pas partagé ton compte. Ferme l'activité et clique de nouveau sur Vérifier."

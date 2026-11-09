@@ -9,12 +9,20 @@
 //!    du bot) et note la vérification dans le salon de logs. Le bot n'a pas besoin d'être joignable.
 //!
 //! Limites : 3 essais par image, 10 images par lien, et un champ piège invisible pour les robots.
+//!
+//! **Dans Discord (Activité)** : le bouton « Vérifier » ouvre le site *dans* Discord
+//! (`https://<application>.discordsays.com`, relayé vers ce site). La page `/activity` utilise le
+//! SDK Embedded App de Discord pour savoir qui est le membre (autorisation OAuth2 `identify`,
+//! code échangé ici avec `DISCORD_CLIENT_SECRET`) et dans quel serveur il est. Le rôle et le salon
+//! de logs de ce serveur viennent du bot, qui les envoie signés à `/api/verify/config`.
 
 use hmac::{Hmac, Mac};
 use rand::Rng;
 use rand::seq::IndexedRandom;
 use sha2::Sha256;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -124,6 +132,46 @@ pub struct Verification {
     defis: Mutex<HashMap<String, Defi>>,
     /// Images générées par lien
     par_lien: Mutex<HashMap<String, (u32, Instant)>>,
+    /// Activité Discord : identifiant et secret OAuth2 de l'application
+    client_id: Option<String>,
+    client_secret: Option<String>,
+    /// Config de vérification de chaque serveur, envoyée par le bot
+    serveurs: Mutex<HashMap<String, ConfigServeur>>,
+    fichier_serveurs: PathBuf,
+}
+
+/// Ce que le bot envoie pour un serveur (identifiants en texte : trop grands pour JavaScript).
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ConfigServeur {
+    pub guild: String,
+    pub enabled: bool,
+    pub role: Option<String>,
+    pub log: Option<String>,
+    pub lang: String,
+}
+
+/// Corps `application/x-www-form-urlencoded`.
+fn formulaire(champs: &[(&str, &str)]) -> String {
+    let encoder = |v: &str| -> String {
+        v.bytes()
+            .map(|b| match b {
+                b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => (b as char).to_string(),
+                _ => format!("%{b:02X}"),
+            })
+            .collect()
+    };
+    champs.iter().map(|(k, v)| format!("{k}={}", encoder(v))).collect::<Vec<_>>().join("&")
+}
+
+/// L'identifiant de l'application se lit au début du token du bot (base64 de l'identifiant).
+fn id_depuis_token(token: &str) -> Option<String> {
+    use base64::Engine;
+    let debut = token.split('.').next()?;
+    let octets = base64::engine::general_purpose::STANDARD_NO_PAD
+        .decode(debut.trim_end_matches('='))
+        .ok()?;
+    let id = String::from_utf8(octets).ok()?;
+    id.bytes().all(|b| b.is_ascii_digit()).then_some(id)
 }
 
 impl Verification {
@@ -140,7 +188,114 @@ impl Verification {
             .build()
             .expect("client HTTP");
         let api = lire("DISCORD_API").unwrap_or_else(|| "https://discord.com/api/v10".into());
-        Self { secret, bot_token, api, http, defis: Mutex::default(), par_lien: Mutex::default() }
+        let client_id = lire("DISCORD_CLIENT_ID").or_else(|| bot_token.as_deref().and_then(id_depuis_token));
+        let client_secret = lire("DISCORD_CLIENT_SECRET");
+        let fichier_serveurs = std::env::var_os("MISTY_CACHE_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(std::env::temp_dir)
+            .join("misty-site-verify-guilds.json");
+        let serveurs = std::fs::read(&fichier_serveurs)
+            .ok()
+            .and_then(|o| serde_json::from_slice(&o).ok())
+            .unwrap_or_default();
+        Self {
+            secret,
+            bot_token,
+            api,
+            http,
+            defis: Mutex::default(),
+            par_lien: Mutex::default(),
+            client_id,
+            client_secret,
+            serveurs: Mutex::new(serveurs),
+            fichier_serveurs,
+        }
+    }
+
+    pub fn client_id(&self) -> Option<&str> {
+        self.client_id.as_deref()
+    }
+
+    /// L'Activité Discord est utilisable (secret OAuth2 en plus du reste).
+    pub fn activite_active(&self) -> bool {
+        self.active() && self.client_id.is_some() && self.client_secret.is_some()
+    }
+
+    /// Config envoyée par le bot : enregistrée si la signature est bonne.
+    pub fn recevoir_config(&self, corps: &[u8], signature: &str) -> bool {
+        let Some(secret) = &self.secret else { return false };
+        let attendu = signer(secret, &String::from_utf8_lossy(corps));
+        if attendu.len() != signature.len() || attendu.bytes().zip(signature.bytes()).fold(0u8, |a, (x, y)| a | (x ^ y)) != 0 {
+            return false;
+        }
+        let Ok(c) = serde_json::from_slice::<ConfigServeur>(corps) else { return false };
+        let json = {
+            let mut s = self.serveurs.lock().unwrap();
+            s.insert(c.guild.clone(), c);
+            serde_json::to_vec(&*s).ok()
+        };
+        if let Some(json) = json {
+            let _ = std::fs::write(&self.fichier_serveurs, json);
+        }
+        true
+    }
+
+    pub fn config(&self, guild: &str) -> Option<ConfigServeur> {
+        self.serveurs.lock().unwrap().get(guild).cloned()
+    }
+
+    /// Activité : échange le code OAuth2 donné par Discord contre l'identifiant du membre.
+    pub async fn membre(&self, code: &str) -> Result<u64, String> {
+        let (Some(id), Some(secret)) = (&self.client_id, &self.client_secret) else {
+            return Err("DISCORD_CLIENT_SECRET manquant".into());
+        };
+        #[derive(Deserialize)]
+        struct Jeton {
+            access_token: String,
+        }
+        #[derive(Deserialize)]
+        struct Moi {
+            id: String,
+        }
+        let jeton: Jeton = self
+            .http
+            .post(format!("{}/oauth2/token", self.api))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(formulaire(&[("client_id", id), ("client_secret", secret), ("grant_type", "authorization_code"), ("code", code)]))
+            .send()
+            .await
+            .and_then(|r| r.error_for_status())
+            .map_err(|e| e.to_string())?
+            .json()
+            .await
+            .map_err(|e| e.to_string())?;
+        let moi: Moi = self
+            .http
+            .get(format!("{}/users/@me", self.api))
+            .bearer_auth(&jeton.access_token)
+            .send()
+            .await
+            .and_then(|r| r.error_for_status())
+            .map_err(|e| e.to_string())?
+            .json()
+            .await
+            .map_err(|e| e.to_string())?;
+        moi.id.parse().map_err(|_| "identifiant invalide".into())
+    }
+
+    /// Lien signé pour ce membre de ce serveur (comme ceux du bot), d'après la config reçue.
+    pub fn lien_pour(&self, guild: &str, user: u64) -> Option<String> {
+        let secret = self.secret.as_deref()?;
+        let c = self.config(guild).filter(|c| c.enabled)?;
+        let payload = format!(
+            "v1.{}.{user}.{}.{}.{}.{}",
+            c.guild.parse::<u64>().ok()?,
+            c.role.as_deref()?.parse::<u64>().ok()?,
+            c.log.as_deref().and_then(|l| l.parse::<u64>().ok()).unwrap_or(0),
+            maintenant() + 600,
+            c.lang
+        );
+        Some(format!("{payload}.{}", signer(secret, &payload)))
     }
 
     pub fn active(&self) -> bool {
@@ -337,6 +492,37 @@ mod tests {
     }
 
     #[test]
+    fn config_du_bot_et_lien() {
+        let v = Verification {
+            secret: Some("s".into()),
+            bot_token: None,
+            api: String::new(),
+            http: reqwest::Client::new(),
+            defis: Mutex::default(),
+            par_lien: Mutex::default(),
+            client_id: None,
+            client_secret: None,
+            serveurs: Mutex::default(),
+            fichier_serveurs: std::env::temp_dir().join("misty-test-verify-guilds-2.json"),
+        };
+        let corps = br#"{"guild":"42","enabled":true,"role":"9","log":null,"lang":"fr"}"#;
+        assert!(!v.recevoir_config(corps, "mauvaise"));
+        assert!(v.lien_pour("42", 7).is_none());
+        assert!(v.recevoir_config(corps, &signer("s", std::str::from_utf8(corps).unwrap())));
+        let lien = v.lien_pour("42", 7).unwrap();
+        let c = verifier_lien("s", &lien, maintenant()).unwrap();
+        assert_eq!((c.guild, c.user, c.role, c.log, c.lang.as_str()), (42, 7, 9, None, "fr"));
+        assert!(v.lien_pour("43", 7).is_none(), "serveur inconnu");
+    }
+
+    #[test]
+    fn id_de_l_application() {
+        // « 123456789012345678 » en base64, comme le début d'un token de bot
+        assert_eq!(id_depuis_token("MTIzNDU2Nzg5MDEyMzQ1Njc4.abc.def").as_deref(), Some("123456789012345678"));
+        assert_eq!(id_depuis_token("pas-un-token"), None);
+    }
+
+    #[test]
     fn toutes_les_lettres_ont_un_glyphe() {
         for c in ALPHABET {
             assert!(glyphe(*c).iter().any(|l| l.contains('#')), "{}", *c as char);
@@ -345,7 +531,18 @@ mod tests {
 
     #[test]
     fn essais() {
-        let v = Verification { secret: Some("s".into()), bot_token: None, api: String::new(), http: reqwest::Client::new(), defis: Mutex::default(), par_lien: Mutex::default() };
+        let v = Verification {
+            secret: Some("s".into()),
+            bot_token: None,
+            api: String::new(),
+            http: reqwest::Client::new(),
+            defis: Mutex::default(),
+            par_lien: Mutex::default(),
+            client_id: None,
+            client_secret: None,
+            serveurs: Mutex::default(),
+            fichier_serveurs: std::env::temp_dir().join("misty-test-verify-guilds.json"),
+        };
         let id = v.nouveau_defi("t").unwrap();
         let code = v.defis.lock().unwrap()[&id].code.clone();
         assert!(v.image(&id).unwrap().starts_with("<svg"));
