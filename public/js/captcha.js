@@ -129,6 +129,7 @@ export function captcha({ onDone } = {}) {
     const map = {
       off: [d.offTitle, d.off], guild: [d.offTitle, d.off], many: [d.badTitle, d.many],
       role: [d.roleTitle, d.role], auth: [d.authTitle, d.auth], expired: [d.badTitle, d.bad],
+      channel: [d.hereTitle, d.here], already: [d.alreadyTitle, d.already],
     };
     const [title, text] = map[error] || [d.authTitle, d.auth];
     end(false, title, text);

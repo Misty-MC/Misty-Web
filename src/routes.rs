@@ -527,6 +527,9 @@ pub async fn verify_page(State(state): State<Arc<AppState>>, Query(q): Query<Ver
         verify_view::Etat::Indisponible
     } else {
         match (&claims, q.t.as_deref()) {
+            (Some(c), Some(_)) if v.a_le_role(c.guild, c.user, c.role).await == Some(true) => {
+                verify_view::Etat::DejaVerifie
+            }
             (Some(c), Some(token)) => match v.nouveau_defi(token) {
                 Some((captcha, y)) => verify_view::Etat::Puzzle {
                     token: token.to_string(),
@@ -643,6 +646,9 @@ pub async fn activity_page(State(state): State<Arc<AppState>>, Query(q): Query<A
 pub struct ActivityStart {
     code: String,
     guild_id: Option<String>,
+    /// Salon où l'Activité a été ouverte
+    #[serde(default)]
+    channel_id: Option<String>,
 }
 
 /// Début : qui est le membre (code OAuth2), lien signé pour son serveur, premier puzzle.
@@ -654,6 +660,12 @@ pub async fn activity_start(State(state): State<Arc<AppState>>, Json(b): Json<Ac
     let Some(guild) = b.guild_id.filter(|g| !g.is_empty()) else {
         return erreur("guild");
     };
+    // seulement dans le salon du règlement (pas depuis le lanceur d'Activités d'un autre salon)
+    if let Some(rules) = v.config(&guild).and_then(|c| c.channel)
+        && b.channel_id.as_deref() != Some(rules.as_str())
+    {
+        return erreur("channel");
+    }
     let user = match v.membre(&b.code).await {
         Ok(u) => u,
         Err(e) => {
@@ -664,6 +676,12 @@ pub async fn activity_start(State(state): State<Arc<AppState>>, Json(b): Json<Ac
     let Some(token) = v.lien_pour(&guild, user) else {
         return erreur("guild");
     };
+    // déjà vérifié : rien à refaire
+    if let Some(c) = v.lien(&token)
+        && v.a_le_role(c.guild, c.user, c.role).await == Some(true)
+    {
+        return erreur("already");
+    }
     match v.nouveau_defi(&token) {
         Some((captcha, y)) => no_store(Json(serde_json::json!({ "token": token, "captcha": captcha, "y": y })).into_response()),
         None => erreur("many"),

@@ -12,6 +12,7 @@ pub enum Etat {
     LienInvalide,
     Indisponible,
     TropDEssais,
+    DejaVerifie,
 }
 
 /// La carte : étapes, consentement, puzzle, fin. Les textes de fin sont dans des `data-*`.
@@ -21,7 +22,8 @@ fn carte(p: &Page, server: Option<&str>, data: Markup) -> Markup {
         div.cp #cp
             data-wrong=(tr.vf_wrong) data-off=(tr.vf_off_p) data-off-title=(tr.vf_off_title)
             data-many=(tr.vf_many_p) data-role=(tr.vf_role_p) data-role-title=(tr.vf_role_title)
-            data-auth=(tr.vf_auth_p) data-auth-title=(tr.vf_auth_t) data-bad=(tr.vf_bad_p) data-bad-title=(tr.vf_bad_title)
+            data-auth=(tr.vf_auth_p) data-auth-title=(tr.vf_auth_t)
+            data-here=(tr.vf_here_p) data-here-title=(tr.vf_here_t) data-already=(tr.vf_already_p) data-already-title=(tr.vf_already_t) data-bad=(tr.vf_bad_p) data-bad-title=(tr.vf_bad_title)
             data-ok-title=(tr.vf_ok_title) data-ok=(tr.vf_ok_p) data-autoclose=(tr.vf_autoclose) data-start=(tr.vf_submit)
             data-piece-w=(puzzle::PIECE_W) data-w=(puzzle::W) data-h=(puzzle::H)
         {
@@ -98,6 +100,7 @@ pub fn render(p: &Page, etat: Etat) -> Markup {
         Etat::LienInvalide => fin(&tr.vf_bad_title, &tr.vf_bad_p),
         Etat::Indisponible => fin(&tr.vf_off_title, &tr.vf_off_p),
         Etat::TropDEssais => fin(&tr.vf_bad_title, &tr.vf_many_p),
+        Etat::DejaVerifie => fin(&tr.vf_already_t, &tr.vf_already_p),
     };
     let main = html! { section.hero.pn-hero.vf-hero { div.wrap { div.pn-copy { (corps) } } } };
     layout::render(p, head(p, "verify-page"), main)
