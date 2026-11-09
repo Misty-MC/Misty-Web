@@ -3,12 +3,12 @@
 //! 1. Dans Discord, le membre clique sur « Vérifier » : le bot lui donne un lien signé
 //!    `/verify?t=v1.<serveur>.<membre>.<rôle>.<salon de logs ou 0>.<expiration>.<langue>.<signature>`
 //!    (HMAC-SHA256 avec `VERIFY_SECRET`, le même secret que le bot ; valable 10 minutes).
-//! 2. Le site vérifie la signature, affiche un captcha en pixel art (un SVG généré à chaque
-//!    fois : caractères dessinés pixel par pixel, mélangés à des pixels parasites).
+//! 2. Le site vérifie la signature et affiche un captcha « puzzle » (voir `crate::puzzle`) : faire
+//!    glisser une pièce jusqu'au trou de l'image.
 //! 3. Réponse juste : le site donne le rôle lui-même via l'API Discord (`DISCORD_TOKEN`, le token
 //!    du bot) et note la vérification dans le salon de logs. Le bot n'a pas besoin d'être joignable.
 //!
-//! Limites : 3 essais par image, 10 images par lien, et un champ piège invisible pour les robots.
+//! Limites : 3 essais par image, 10 images par lien, et le geste doit ressembler à celui d'un humain.
 //!
 //! **Dans Discord (Activité)** : le bouton « Vérifier » ouvre le site *dans* Discord
 //! (`https://<application>.discordsays.com`, relayé vers ce site). La page `/activity` utilise le
@@ -18,7 +18,6 @@
 
 use hmac::{Hmac, Mac};
 use rand::Rng;
-use rand::seq::IndexedRandom;
 use sha2::Sha256;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -26,43 +25,9 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-/// Caractères sans ambiguïté (pas de 0/O, 1/I, 2/Z, 5/S, 8/B, 6/E, U/V, N/M…).
-const ALPHABET: &[u8] = b"ACDEFHJKLMPRTVWXY3479";
-const LONGUEUR: usize = 5;
 const ESSAIS_PAR_IMAGE: u32 = 3;
 const IMAGES_PAR_LIEN: u32 = 10;
 const VIE_IMAGE: Duration = Duration::from_secs(600);
-
-/// Police 5×7 (une chaîne par ligne, `#` = pixel allumé).
-fn glyphe(c: u8) -> [&'static str; 7] {
-    match c {
-        b'A' => [".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
-        b'C' => [".####", "#....", "#....", "#....", "#....", "#....", ".####"],
-        b'D' => ["####.", "#...#", "#...#", "#...#", "#...#", "#...#", "####."],
-        b'E' => ["#####", "#....", "#....", "####.", "#....", "#....", "#####"],
-        b'F' => ["#####", "#....", "#....", "####.", "#....", "#....", "#...."],
-        b'H' => ["#...#", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
-        b'J' => ["..###", "...#.", "...#.", "...#.", "...#.", "#..#.", ".##.."],
-        b'K' => ["#...#", "#..#.", "#.#..", "##...", "#.#..", "#..#.", "#...#"],
-        b'L' => ["#....", "#....", "#....", "#....", "#....", "#....", "#####"],
-        b'M' => ["#...#", "##.##", "#.#.#", "#.#.#", "#...#", "#...#", "#...#"],
-        b'N' => ["#...#", "##..#", "#.#.#", "#..##", "#...#", "#...#", "#...#"],
-        b'P' => ["####.", "#...#", "#...#", "####.", "#....", "#....", "#...."],
-        b'R' => ["####.", "#...#", "#...#", "####.", "#.#..", "#..#.", "#...#"],
-        b'T' => ["#####", "..#..", "..#..", "..#..", "..#..", "..#..", "..#.."],
-        b'U' => ["#...#", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."],
-        b'V' => ["#...#", "#...#", "#...#", "#...#", "#...#", ".#.#.", "..#.."],
-        b'W' => ["#...#", "#...#", "#...#", "#.#.#", "#.#.#", "##.##", "#...#"],
-        b'X' => ["#...#", "#...#", ".#.#.", "..#..", ".#.#.", "#...#", "#...#"],
-        b'Y' => ["#...#", "#...#", ".#.#.", "..#..", "..#..", "..#..", "..#.."],
-        b'3' => ["####.", "....#", "....#", ".###.", "....#", "....#", "####."],
-        b'4' => ["#..#.", "#..#.", "#..#.", "#####", "...#.", "...#.", "...#."],
-        b'6' => [".###.", "#....", "#....", "####.", "#...#", "#...#", ".###."],
-        b'7' => ["#####", "....#", "...#.", "..#..", ".#...", ".#...", ".#..."],
-        b'9' => [".###.", "#...#", "#...#", ".####", "....#", "....#", ".###."],
-        _ => [".....", ".....", ".....", ".....", ".....", ".....", "....."],
-    }
-}
 
 /// Contenu d'un lien signé par le bot.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -116,7 +81,8 @@ pub fn maintenant() -> u64 {
 }
 
 struct Defi {
-    code: String,
+    /// Graine de l'image (position du trou, paysage)
+    graine: u64,
     token: String,
     cree: Instant,
     essais: u32,
@@ -158,6 +124,9 @@ pub struct ConfigServeur {
     pub remove: Option<String>,
     pub log: Option<String>,
     pub lang: String,
+    /// Nom du serveur Discord (affiché sur la page)
+    #[serde(default)]
+    pub name: Option<String>,
 }
 
 /// Corps `application/x-www-form-urlencoded`.
@@ -317,8 +286,8 @@ impl Verification {
         verifier_lien(self.secret.as_deref()?, token, maintenant())
     }
 
-    /// Nouvelle image pour ce lien ; `None` après trop d'images.
-    pub fn nouveau_defi(&self, token: &str) -> Option<String> {
+    /// Nouveau puzzle pour ce lien : (identifiant, hauteur de la pièce) ; `None` après trop de défis.
+    pub fn nouveau_defi(&self, token: &str) -> Option<(String, u32)> {
         {
             let mut par_lien = self.par_lien.lock().unwrap();
             par_lien.retain(|_, (_, t)| t.elapsed() < VIE_IMAGE * 2);
@@ -329,32 +298,34 @@ impl Verification {
             n.0 += 1;
         }
         let mut rng = rand::rng();
-        let code: String = (0..LONGUEUR).map(|_| *ALPHABET.choose(&mut rng).unwrap() as char).collect();
+        let graine: u64 = rng.random();
         let id: String = (0..24).map(|_| format!("{:x}", rng.random_range(0..16u8))).collect();
         let mut defis = self.defis.lock().unwrap();
         defis.retain(|_, d| d.cree.elapsed() < VIE_IMAGE);
         if defis.len() > 20_000 {
             return None;
         }
-        defis.insert(id.clone(), Defi { code, token: token.to_string(), cree: Instant::now(), essais: 0 });
-        Some(id)
+        defis.insert(id.clone(), Defi { graine, token: token.to_string(), cree: Instant::now(), essais: 0 });
+        Some((id, crate::puzzle::position(graine).1))
     }
 
-    /// L'image d'un défi (SVG), tant qu'il est valide.
-    pub fn image(&self, id: &str) -> Option<String> {
-        let defis = self.defis.lock().unwrap();
-        let d = defis.get(id).filter(|d| d.cree.elapsed() < VIE_IMAGE)?;
-        Some(dessiner(&d.code))
+    /// Image d'un défi (PNG) : le fond avec le trou, ou la pièce.
+    pub fn image(&self, id: &str, piece: bool) -> Option<Vec<u8>> {
+        let graine = {
+            let defis = self.defis.lock().unwrap();
+            defis.get(id).filter(|d| d.cree.elapsed() < VIE_IMAGE)?.graine
+        };
+        if piece { crate::puzzle::image_piece(graine) } else { crate::puzzle::image_fond(graine) }
     }
 
-    pub fn repondre(&self, id: &str, token: &str, essai: &str) -> Reponse {
+    /// Réponse : position finale de la pièce (pixels de l'image) et tracé du geste.
+    pub fn repondre(&self, id: &str, token: &str, x: f32, trace: &[(f32, f32)]) -> Reponse {
         let mut defis = self.defis.lock().unwrap();
         let Some(d) = defis.get_mut(id).filter(|d| d.token == token && d.cree.elapsed() < VIE_IMAGE) else {
             return Reponse::Perime;
         };
         d.essais += 1;
-        let propre: String = essai.chars().filter(|c| !c.is_whitespace()).collect::<String>().to_ascii_uppercase();
-        if propre == d.code {
+        if crate::puzzle::bonne_position(d.graine, x) && crate::puzzle::geste_humain(trace) {
             defis.remove(id);
             Reponse::Juste
         } else if d.essais >= ESSAIS_PAR_IMAGE {
@@ -432,60 +403,6 @@ impl Default for Verification {
     }
 }
 
-/// Le captcha : chaque caractère dessiné pixel par pixel (police 5×7), décalé et incliné au
-/// hasard, au milieu de pixels parasites de mêmes tailles et couleurs, et de deux traits.
-pub fn dessiner(code: &str) -> String {
-    let mut rng = rand::rng();
-    let (w, h) = (330, 100);
-    let couleurs = ["#c8dbff", "#e2ecff", "#9cc0ff", "#b6ccff"];
-    let mut pixels: Vec<String> = Vec::new();
-    let px = 7.0;
-    for (i, c) in code.bytes().enumerate() {
-        let x0 = 28.0 + i as f32 * 58.0 + rng.random_range(-4.0..4.0);
-        let y0 = 24.0 + rng.random_range(-7.0..7.0);
-        let angle: f32 = rng.random_range(-9.0..9.0);
-        let (cx, cy) = (x0 + 2.5 * px, y0 + 3.5 * px);
-        let (sin, cos) = angle.to_radians().sin_cos();
-        let couleur = couleurs.choose(&mut rng).unwrap();
-        for (ly, ligne) in glyphe(c).iter().enumerate() {
-            for (lx, b) in ligne.bytes().enumerate() {
-                if b != b'#' {
-                    continue;
-                }
-                // rotation autour du centre du caractère, plus un léger tremblement
-                let (dx, dy) = (x0 + lx as f32 * px - cx, y0 + ly as f32 * px - cy);
-                let x = cx + dx * cos - dy * sin + rng.random_range(-0.6..0.6);
-                let y = cy + dx * sin + dy * cos + rng.random_range(-0.6..0.6);
-                pixels.push(format!(r#"<rect x="{x:.1}" y="{y:.1}" width="{px}" height="{px}" fill="{couleur}"/>"#));
-            }
-        }
-    }
-    // pixels parasites : plus petits et plus sombres que les caractères (lisibles pour un humain)
-    let parasites = ["#6f9cff", "#4d6fb8", "#8fb1f5"];
-    for _ in 0..55 {
-        let taille = rng.random_range(3.0..5.5);
-        let (x, y) = (rng.random_range(0.0..(w as f32 - taille)), rng.random_range(0.0..(h as f32 - taille)));
-        let couleur = parasites.choose(&mut rng).unwrap();
-        let opacite = rng.random_range(0.3..0.7);
-        pixels.push(format!(r#"<rect x="{x:.1}" y="{y:.1}" width="{taille:.1}" height="{taille:.1}" fill="{couleur}" opacity="{opacite:.2}"/>"#));
-    }
-    // ordre mélangé : l'ordre du fichier ne trahit pas les caractères
-    use rand::seq::SliceRandom;
-    pixels.shuffle(&mut rng);
-    let mut traits = String::new();
-    for _ in 0..2 {
-        let mut d = format!("M0 {:.0}", rng.random_range(15.0..80.0));
-        for k in 1..=6 {
-            d.push_str(&format!(" L{} {:.0}", k * w / 6, rng.random_range(10.0..86.0)));
-        }
-        traits.push_str(&format!(r##"<path d="{d}" stroke="#6f9cff" stroke-width="2" fill="none" opacity="0.35"/>"##));
-    }
-    format!(
-        r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}" shape-rendering="crispEdges"><rect width="{w}" height="{h}" fill="#0f1830"/>{}{traits}</svg>"##,
-        pixels.concat()
-    )
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -506,21 +423,6 @@ mod tests {
         let token = format!("{payload}.{}", signer("secret", payload));
         let c = verifier_lien("secret", &token, 1999).unwrap();
         assert_eq!((c.role, c.remove, c.log), (9, Some(4), Some(5)));
-    }
-
-    /// `PREVIEW_DIR=… cargo test apercu_captcha -- --ignored` : quelques images et leurs codes.
-    #[test]
-    #[ignore]
-    fn apercu_captcha() {
-        let dir = std::env::var("PREVIEW_DIR").unwrap();
-        let mut codes = String::new();
-        for i in 0..6 {
-            let mut rng = rand::rng();
-            let code: String = (0..LONGUEUR).map(|_| *ALPHABET.choose(&mut rng).unwrap() as char).collect();
-            std::fs::write(format!("{dir}/c{i}.svg"), dessiner(&code)).unwrap();
-            codes.push_str(&format!("{i} {code}\n"));
-        }
-        std::fs::write(format!("{dir}/codes.txt"), codes).unwrap();
     }
 
     #[test]
@@ -555,13 +457,6 @@ mod tests {
     }
 
     #[test]
-    fn toutes_les_lettres_ont_un_glyphe() {
-        for c in ALPHABET {
-            assert!(glyphe(*c).iter().any(|l| l.contains('#')), "{}", *c as char);
-        }
-    }
-
-    #[test]
     fn essais() {
         let v = Verification {
             secret: Some("s".into()),
@@ -575,19 +470,22 @@ mod tests {
             serveurs: Mutex::default(),
             fichier_serveurs: std::env::temp_dir().join("misty-test-verify-guilds.json"),
         };
-        let id = v.nouveau_defi("t").unwrap();
-        let code = v.defis.lock().unwrap()[&id].code.clone();
-        assert!(v.image(&id).unwrap().starts_with("<svg"));
-        assert_eq!(v.repondre(&id, "autre lien", &code), Reponse::Perime);
-        assert_eq!(v.repondre(&id, "t", "XXXXXX"), Reponse::Faux);
-        assert_eq!(v.repondre(&id, "t", &code.to_lowercase()), Reponse::Juste);
-        assert_eq!(v.repondre(&id, "t", &code), Reponse::Perime, "une image ne sert qu'une fois");
-        // 3 essais faux : l'image est jetée
-        let id = v.nouveau_defi("t").unwrap();
-        for _ in 0..2 {
-            assert_eq!(v.repondre(&id, "t", "nope"), Reponse::Faux);
-        }
-        assert_eq!(v.repondre(&id, "t", "nope"), Reponse::Perime);
+        let humain = [(0.0, 0.0), (40.0, 3.0), (80.0, 15.0), (120.0, 40.0), (180.0, 80.0), (240.0, 110.0), (300.0, 124.0), (380.0, 130.0)];
+        let (id, y) = v.nouveau_defi("t").unwrap();
+        let graine = v.defis.lock().unwrap()[&id].graine;
+        let (x, py) = crate::puzzle::position(graine);
+        assert_eq!(y, py);
+        assert!(v.image(&id, false).unwrap().starts_with(b"\x89PNG"));
+        assert!(v.image(&id, true).unwrap().starts_with(b"\x89PNG"));
+        assert_eq!(v.repondre(&id, "autre lien", x as f32, &humain), Reponse::Perime);
+        assert_eq!(v.repondre(&id, "t", x as f32 + 30.0, &humain), Reponse::Faux);
+        assert_eq!(v.repondre(&id, "t", x as f32 + 2.0, &[(0.0, 0.0), (10.0, x as f32)]), Reponse::Faux, "geste de robot");
+        assert_eq!(v.repondre(&id, "t", x as f32 + 30.0, &humain), Reponse::Perime, "3 essais ratés : défi jeté");
+        assert_eq!(v.repondre(&id, "t", x as f32, &humain), Reponse::Perime);
+        let (id, _) = v.nouveau_defi("t").unwrap();
+        let x = crate::puzzle::position(v.defis.lock().unwrap()[&id].graine).0;
+        assert_eq!(v.repondre(&id, "t", x as f32 - 3.0, &humain), Reponse::Juste);
+        assert_eq!(v.repondre(&id, "t", x as f32, &humain), Reponse::Perime, "un défi ne sert qu'une fois");
         // au plus 10 images par lien
         for _ in 0..8 {
             assert!(v.nouveau_defi("t").is_some());

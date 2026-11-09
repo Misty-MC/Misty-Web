@@ -19,6 +19,7 @@
 //!   (`/api/telemetry/summary`, `/api/telemetry/report/{code}`) avec `Authorization: Bearer …`
 
 mod discord;
+mod puzzle;
 mod verify;
 mod docs;
 mod format;
@@ -130,12 +131,12 @@ async fn main() {
         .route("/status.json", get(routes::status_json))
         .route("/api/latest", get(routes::api_latest))
         .route("/download/{kind}", get(routes::download))
-        .route("/verify", get(routes::verify_page).post(routes::verify_submit))
-        .route("/verify/captcha/{file}", get(routes::verify_captcha))
+        .route("/verify", get(routes::verify_page))
+        .route("/verify/answer", post(routes::verify_answer).layer(DefaultBodyLimit::max(32 * 1024)))
+        .route("/verify/new", post(routes::verify_new))
+        .route("/verify/captcha/{id}/{file}", get(routes::verify_image))
         .route("/activity", get(routes::activity_page))
         .route("/activity/start", post(routes::activity_start))
-        .route("/activity/new", post(routes::activity_new))
-        .route("/activity/answer", post(routes::activity_answer))
         .route("/activity/log", post(routes::activity_log).layer(DefaultBodyLimit::max(2 * 1024)))
         .route("/api/verify/config", post(routes::verify_config).layer(DefaultBodyLimit::max(4 * 1024)))
         .route(

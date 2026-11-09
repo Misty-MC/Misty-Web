@@ -1,136 +1,130 @@
-//! Page du captcha de vérification Discord (voir `crate::verify`).
+//! Pages du captcha de vérification Discord (voir `crate::verify` et `crate::puzzle`) :
+//! trois étapes (consentement, défi, vérifié) dans une seule carte, pilotée par `/js/captcha.js`.
+//! La même carte sert dans le navigateur (`/verify`) et dans Discord (`/activity`).
 
 use super::layout::{self, Head, Page};
-use maud::{Markup, html};
+use crate::puzzle;
+use maud::{Markup, PreEscaped, html};
 
-pub enum Etat<'a> {
-    /// Captcha à résoudre (`erreur` : la réponse précédente était fausse)
-    Captcha { token: &'a str, defi: &'a str, erreur: bool },
-    Reussi,
+pub enum Etat {
+    /// Puzzle prêt (lien valide)
+    Puzzle { token: String, captcha: String, y: u32, server: Option<String> },
     LienInvalide,
     Indisponible,
     TropDEssais,
-    EchecRole,
 }
 
-pub fn render(p: &Page, etat: Etat) -> Markup {
+/// La carte : étapes, consentement, puzzle, fin. Les textes de fin sont dans des `data-*`.
+fn carte(p: &Page, server: Option<&str>, data: Markup) -> Markup {
     let tr = p.tr;
-    let carte = match etat {
-        Etat::Captcha { token, defi, erreur } => html! {
-            form.vf-card method="post" action=(format!("/verify?lang={}", p.lang.code())) autocomplete="off" {
-                img.vf-img src=(format!("/verify/captcha/{defi}.svg")) width="330" height="100" alt=(tr.vf_input);
-                @if erreur { p.vf-msg.bad role="alert" { (tr.vf_wrong) } }
-                input type="hidden" name="t" value=(token);
-                input type="hidden" name="id" value=(defi);
-                // piège : invisible pour les humains, rempli par les robots naïfs
-                div.vf-trap aria-hidden="true" { input type="text" name="website" tabindex="-1" autocomplete="off"; }
-                label.vf-field {
-                    span { (tr.vf_input) }
-                    input type="text" name="code" required maxlength="12" autocapitalize="characters" spellcheck="false" autofocus inputmode="text";
-                }
-                div.vf-actions {
-                    button.btn.play type="submit" { (tr.vf_submit) }
-                    a.btn.ghost href=(format!("/verify?t={token}&lang={}", p.lang.code())) { (tr.vf_new) }
-                }
-                p.vf-hint { (tr.vf_hint) }
-            }
-        },
-        Etat::Reussi => fin("ok", &tr.vf_ok_title, &tr.vf_ok_p),
-        Etat::LienInvalide => fin("bad", &tr.vf_bad_title, &tr.vf_bad_p),
-        Etat::Indisponible => fin("bad", &tr.vf_off_title, &tr.vf_off_p),
-        Etat::TropDEssais => fin("bad", &tr.vf_bad_title, &tr.vf_many_p),
-        Etat::EchecRole => fin("bad", &tr.vf_role_title, &tr.vf_role_p),
-    };
-    let main = html! {
-        section.hero.pn-hero.vf-hero {
-            div.wrap { div.pn-copy {
-                div.tags { span { (tr.vf_label) } }
-                h1 { (tr.vf_h1_1) " " span.accent { (tr.vf_h1_2) } }
-                p.sub { (tr.vf_sub) }
-                (carte)
-            } }
-        }
-    };
-    layout::render(
-        p,
-        Head {
-            title: &tr.vf_title,
-            description: &tr.vf_sub,
-            jsonld: None,
-            css: &["home", "patch-notes", "verify"],
-            scripts: &[],
-            body_class: "verify-page",
-        },
-        main,
-    )
-}
-
-fn fin(classe: &str, titre: &str, texte: &str) -> Markup {
     html! {
-        div.vf-card.vf-end.(classe) {
-            span.vf-badge.(classe) { @if classe == "ok" { "✓" } @else { "!" } }
-            h2 { (titre) }
-            p { (texte) }
-            a.btn.ghost href="discord://-/channels/@me" { "Discord" }
+        div.cp #cp
+            data-wrong=(tr.vf_wrong) data-off=(tr.vf_off_p) data-off-title=(tr.vf_off_title)
+            data-many=(tr.vf_many_p) data-role=(tr.vf_role_p) data-role-title=(tr.vf_role_title)
+            data-auth=(tr.vf_auth_p) data-auth-title=(tr.vf_auth_t) data-bad=(tr.vf_bad_p) data-bad-title=(tr.vf_bad_title)
+            data-ok-title=(tr.vf_ok_title) data-ok=(tr.vf_ok_p) data-autoclose=(tr.vf_autoclose) data-start=(tr.vf_submit)
+            data-piece-w=(puzzle::PIECE_W) data-w=(puzzle::W) data-h=(puzzle::H)
+        {
+            (data)
+            div.cp-head {
+                img.cp-logo src="/assets/icone.png" alt="" width="52" height="52";
+                div {
+                    h2 { (tr.vf_title_short) }
+                    @if let Some(s) = server { p { (tr.vf_for) " " strong { (s) } } }
+                }
+            }
+            ol.cp-steps {
+                li #cp-s1 .on { span {} (tr.vf_step_1) }
+                li #cp-s2 { span {} (tr.vf_step_2) }
+                li #cp-s3 { span {} (tr.vf_step_3) }
+            }
+            // 1. Consentement
+            section #cp-consent {
+                p.cp-text { (tr.vf_consent_p) }
+                button.btn.play #cp-start type="button" disabled { span #cp-start-label { (tr.vf_loading) } }
+            }
+            // 2. Le puzzle
+            section #cp-challenge hidden {
+                p.cp-text.center { (tr.vf_drag) }
+                div.cp-stage #cp-stage {
+                    img.cp-bg #cp-bg alt=(tr.vf_input) draggable="false";
+                    img.cp-piece #cp-piece alt="" draggable="false";
+                }
+                p.vf-msg.bad #cp-err role="alert" hidden {}
+                div.cp-slider #cp-slider {
+                    div.cp-fill #cp-fill {}
+                    span.cp-label { (tr.vf_slide) }
+                    button.cp-knob #cp-knob type="button" aria-label=(tr.vf_slide) { (PreEscaped(r#"<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>"#)) }
+                }
+                button.cp-another #cp-another type="button" { "↻ " (tr.vf_new) }
+            }
+            // 3. Fin (réussite ou erreur)
+            section.vf-end #cp-end hidden {
+                span.vf-badge #cp-badge {}
+                h2 #cp-title {}
+                p #cp-msg {}
+                code.vf-detail #cp-detail hidden {}
+                p.vf-hint #cp-auto hidden {}
+                button.btn.ghost #cp-close type="button" hidden { (tr.vf_close) }
+            }
+            p.cp-privacy { (tr.vf_hint) }
         }
     }
 }
 
-/// Page ouverte dans Discord (Activité) : tout se passe ici, sans changer de page, pour garder la
-/// connexion au SDK Discord (`/js/activity.js`).
-pub fn activite(p: &Page, client_id: Option<&str>) -> Markup {
+fn head<'a>(p: &'a Page, body_class: &'a str) -> Head<'a> {
+    Head {
+        title: &p.tr.vf_title,
+        description: &p.tr.vf_sub,
+        jsonld: None,
+        css: &["home", "patch-notes", "verify"],
+        scripts: &[],
+        body_class,
+    }
+}
+
+/// `/verify` dans le navigateur.
+pub fn render(p: &Page, etat: Etat) -> Markup {
     let tr = p.tr;
     let v = super::layout::ASSET_VERSION.as_str();
-    let main = html! {
-        section.hero.pn-hero.vf-hero {
-            div.wrap { div.pn-copy {
-                div.tags { span { (tr.vf_label) } }
-                h1 { (tr.vf_h1_1) " " span.accent { (tr.vf_h1_2) } }
-                p.sub { (tr.vf_sub) }
-                div #vf-app.vf-card
-                    data-client=[client_id]
-                    data-wrong=(tr.vf_wrong) data-off=(tr.vf_off_p) data-many=(tr.vf_many_p)
-                    data-role=(tr.vf_role_p) data-auth=(tr.vf_auth_p) data-auth-title=(tr.vf_auth_t) data-autoclose=(tr.vf_autoclose) data-bad=(tr.vf_bad_p)
-                    data-bad-title=(tr.vf_bad_title) data-off-title=(tr.vf_off_title) data-role-title=(tr.vf_role_title)
-                {
-                    p.vf-wait #vf-wait { span.vf-spin {} (tr.vf_loading) }
-                    form #vf-form hidden autocomplete="off" {
-                        img.vf-img #vf-img width="330" height="100" alt=(tr.vf_input);
-                        p.vf-msg.bad #vf-err role="alert" hidden {}
-                        label.vf-field {
-                            span { (tr.vf_input) }
-                            input #vf-code type="text" required maxlength="12" autocapitalize="characters" spellcheck="false";
-                        }
-                        div.vf-actions {
-                            button.btn.play type="submit" { (tr.vf_submit) }
-                            button.btn.ghost #vf-new type="button" { (tr.vf_new) }
-                        }
-                        p.vf-hint { (tr.vf_hint) }
-                    }
-                    div.vf-end #vf-end hidden {
-                        span.vf-badge #vf-badge {}
-                        h2 #vf-title {}
-                        p #vf-text {}
-                        code.vf-detail #vf-detail hidden {}
-                        p.vf-hint #vf-auto hidden {}
-                        button.btn.ghost #vf-close type="button" { (tr.vf_close) }
-                    }
-                    div hidden #vf-ok data-title=(tr.vf_ok_title) data-text=(tr.vf_ok_p) {}
-                }
-                script type="module" src=(format!("/js/activity.js?v={v}")) {}
-            } }
+    let corps = match etat {
+        Etat::Puzzle { token, captcha, y, server } => {
+            let data = html! { div hidden #cp-data data-token=(token) data-captcha=(captcha) data-y=(y) {} };
+            html! {
+                (carte(p, server.as_deref(), data))
+                script type="module" src=(format!("/js/verify-page.js?v={v}")) {}
+            }
         }
+        Etat::LienInvalide => fin(&tr.vf_bad_title, &tr.vf_bad_p),
+        Etat::Indisponible => fin(&tr.vf_off_title, &tr.vf_off_p),
+        Etat::TropDEssais => fin(&tr.vf_bad_title, &tr.vf_many_p),
     };
-    layout::render(
-        p,
-        Head {
-            title: &tr.vf_title,
-            description: &tr.vf_sub,
-            jsonld: None,
-            css: &["home", "patch-notes", "verify"],
-            scripts: &[],
-            body_class: "verify-page activity",
-        },
-        main,
-    )
+    let main = html! { section.hero.pn-hero.vf-hero { div.wrap { div.pn-copy { (corps) } } } };
+    layout::render(p, head(p, "verify-page"), main)
+}
+
+/// Erreur avant même le puzzle (lien expiré…).
+fn fin(titre: &str, texte: &str) -> Markup {
+    html! {
+        div.cp {
+            div.vf-end.bad {
+                span.vf-badge.bad { "!" }
+                h2 { (titre) }
+                p { (texte) }
+            }
+        }
+    }
+}
+
+/// `/activity` dans Discord : le SDK Discord identifie le membre, puis même carte.
+pub fn activite(p: &Page, client_id: Option<&str>, server: Option<&str>) -> Markup {
+    let v = super::layout::ASSET_VERSION.as_str();
+    let data = html! { div hidden #cp-data data-client=[client_id] {} };
+    let main = html! {
+        section.hero.pn-hero.vf-hero { div.wrap { div.pn-copy {
+            (carte(p, server, data))
+            script type="module" src=(format!("/js/activity.js?v={v}")) {}
+        } } }
+    };
+    layout::render(p, head(p, "verify-page activity"), main)
 }

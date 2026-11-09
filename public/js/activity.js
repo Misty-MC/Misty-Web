@@ -1,40 +1,17 @@
 // Vérification dans Discord (Activité) : le SDK Embedded App dit qui est le membre et dans quel
-// serveur il est ; le captcha se fait ensuite ici, sans changer de page.
+// serveur il est ; le puzzle se fait ensuite comme dans le navigateur.
 import { DiscordSDK } from "/js/discord-sdk.js";
+import { captcha } from "/js/captcha.js";
 
-const app = document.getElementById("vf-app");
-const $ = id => document.getElementById(id);
-const d = app.dataset;
+const client = document.getElementById("cp-data").dataset.client;
 let sdk = null;
-let token = "";
-let captcha = "";
+const close = () => sdk && sdk.close(1000, "done");
+const cp = captcha({ onDone: () => cp.autoClose(10, close) });
 
 const post = (url, body) =>
   fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
     .then(r => r.json())
     .catch(() => ({ error: "network" }));
-
-function end(ok, title, text) {
-  $("vf-wait").hidden = true;
-  $("vf-form").hidden = true;
-  $("vf-end").hidden = false;
-  $("vf-end").className = "vf-end " + (ok ? "ok" : "bad");
-  $("vf-badge").className = "vf-badge " + (ok ? "ok" : "bad");
-  $("vf-badge").textContent = ok ? "✓" : "!";
-  $("vf-title").textContent = title;
-  $("vf-text").textContent = text;
-}
-
-function fail(error, detail) {
-  const map = {
-    off: [d.offTitle, d.off], guild: [d.offTitle, d.off], many: [d.badTitle, d.many],
-    role: [d.roleTitle, d.role], auth: [d.authTitle, d.auth], expired: [d.badTitle, d.bad],
-  };
-  const [title, text] = map[error] || [d.authTitle, d.auth];
-  end(false, title, text);
-  $("vf-detail").textContent = detail || "";
-  $("vf-detail").hidden = !detail;
-}
 
 // Erreur côté Discord : notée dans les logs du site, pour savoir ce qui bloque.
 function report(stage, err) {
@@ -43,61 +20,16 @@ function report(stage, err) {
   return detail;
 }
 
-function showCaptcha(id, wrong) {
-  captcha = id;
-  $("vf-img").src = `/verify/captcha/${id}.svg`;
-  $("vf-wait").hidden = true;
-  $("vf-form").hidden = false;
-  $("vf-err").hidden = !wrong;
-  $("vf-err").textContent = d.wrong;
-  $("vf-code").value = "";
-  $("vf-code").focus();
-}
-
-$("vf-form").addEventListener("submit", async e => {
-  e.preventDefault();
-  const r = await post("/activity/answer", { t: token, id: captcha, code: $("vf-code").value });
-  if (r.ok) {
-    end(true, $("vf-ok").dataset.title, $("vf-ok").dataset.text);
-    autoClose(10);
-  }
-  else if (r.captcha) showCaptcha(r.captcha, true);
-  else fail(r.error);
-});
-
-$("vf-new").addEventListener("click", async () => {
-  const r = await post("/activity/new", { t: token });
-  if (r.captcha) showCaptcha(r.captcha, false);
-  else fail(r.error);
-});
-
-const closeActivity = () => {
-  if (sdk) sdk.close(1000, "done");
-};
-$("vf-close").addEventListener("click", closeActivity);
-
-// Après la vérification : fermeture automatique, avec un compte à rebours.
-function autoClose(seconds) {
-  const label = $("vf-auto");
-  const tick = () => {
-    label.textContent = d.autoclose.replace("{0}", seconds);
-    label.hidden = false;
-    if (seconds-- <= 0) closeActivity();
-    else setTimeout(tick, 1000);
-  };
-  tick();
-}
-
 (async () => {
-  if (!d.client) return fail("off");
+  if (!client) return cp.fail("off");
   let stage = "sdk";
   try {
-    sdk = new DiscordSDK(d.client);
+    sdk = new DiscordSDK(client);
     stage = "ready";
     await sdk.ready();
     stage = "authorize";
     const { code } = await sdk.commands.authorize({
-      client_id: d.client,
+      client_id: client,
       response_type: "code",
       state: "",
       prompt: "none",
@@ -105,11 +37,9 @@ function autoClose(seconds) {
     });
     stage = "start";
     const r = await post("/activity/start", { code, guild_id: sdk.guildId });
-    if (r.token && r.captcha) {
-      token = r.token;
-      showCaptcha(r.captcha, false);
-    } else fail(r.error, r.error === "auth" ? "start: token" : "");
+    if (r.token && r.captcha) cp.ready(r.token, r.captcha, r.y);
+    else cp.fail(r.error, r.error === "auth" ? "start: token" : "");
   } catch (err) {
-    fail("auth", report(stage, err));
+    cp.fail("auth", report(stage, err));
   }
 })();

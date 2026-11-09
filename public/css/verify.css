@@ -1,35 +1,67 @@
 /* Captcha de vérification Discord (chargé après home.css et patch-notes.css). */
-.vf-hero{min-height:calc(100vh - 160px)}
-.vf-card{margin-top:28px;max-width:520px;padding:24px;border-radius:18px;background:var(--panel);border:1px solid var(--line-2);box-shadow:0 4px 0 #060a14,0 30px 60px -30px rgba(0,0,0,.7);display:flex;flex-direction:column;gap:16px}
-.vf-img{display:block;width:100%;height:auto;aspect-ratio:330/100;border-radius:12px;border:1px solid var(--line-2);image-rendering:pixelated;background:#0f1830;user-select:none;-webkit-user-drag:none}
-.vf-field{display:flex;flex-direction:column;gap:8px}
-.vf-field span{font-size:13px;color:var(--dim)}
-.vf-field input{font-family:var(--pix);font-size:22px;letter-spacing:.3em;text-transform:uppercase;padding:14px 16px;border-radius:12px;background:#0b1224;border:1px solid var(--line-2);color:var(--text);outline:none;transition:border-color .15s,box-shadow .15s}
-.vf-field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(156,192,255,.18)}
-.vf-actions{display:flex;gap:12px;flex-wrap:wrap}
-.vf-actions .btn{flex:1 1 160px;justify-content:center}
-.vf-hint{font-size:12.5px;color:var(--dim)}
+.vf-hero{min-height:calc(100vh - 160px);padding-bottom:120px}
+.vf-hero .pn-copy{width:100%;max-width:none;display:flex;justify-content:center}
+
+/* La carte */
+.cp{width:100%;max-width:520px;margin:12px auto 0;padding:24px;border-radius:20px;background:var(--panel);border:1px solid var(--line-2);box-shadow:0 4px 0 #060a14,0 30px 60px -30px rgba(0,0,0,.7);display:flex;flex-direction:column;gap:18px}
+.cp [hidden]{display:none!important}
+.cp section{display:flex;flex-direction:column;gap:16px}
+.cp-head{display:flex;align-items:center;gap:14px}
+.cp-logo{width:52px;height:52px;border-radius:14px;flex:none;box-shadow:0 0 0 1px var(--line-2)}
+.cp-head h2{font-size:22px;font-weight:750;letter-spacing:-.01em}
+.cp-head p{font-size:14px;color:var(--dim)}
+.cp-head strong{color:var(--text);font-weight:650}
+
+/* Étapes */
+.cp-steps{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0;padding:0}
+.cp-steps li{display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--dim)}
+.cp-steps li span{height:4px;border-radius:4px;background:var(--line-2);transition:background .3s}
+.cp-steps li.on{color:var(--text);font-weight:600}
+.cp-steps li.on span{background:linear-gradient(90deg,var(--accent),rgba(156,192,255,.35))}
+.cp-steps li.done span{background:var(--accent)}
+
+.cp-text{font-size:15px;color:var(--muted);line-height:1.55}
+.cp-text.center{text-align:center}
+#cp-start{justify-content:center}
+#cp-start:disabled{opacity:.7;cursor:wait;transform:none}
+
+/* Le puzzle */
+.cp-stage{position:relative;width:100%;aspect-ratio:340/200;border-radius:14px;overflow:hidden;border:1px solid var(--line-2);background:#0b1224;user-select:none;-webkit-user-select:none;touch-action:none}
+.cp-stage img{display:block;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.cp-bg{width:100%;height:100%}
+.cp-piece{position:absolute;left:0;top:0;height:auto;filter:drop-shadow(0 4px 8px rgba(0,0,0,.55))}
+
+/* Glissière */
+.cp-slider{position:relative;height:56px;border-radius:14px;background:#0b1224;border:1px solid var(--line-2);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+.cp-fill{position:absolute;left:0;top:0;bottom:0;width:28px;background:linear-gradient(90deg,rgba(111,156,255,.28),rgba(111,156,255,.12))}
+.cp-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-left:60px;font-size:15px;color:var(--dim);pointer-events:none;transition:opacity .2s}
+.cp-slider.moving .cp-label{opacity:0}
+.cp-knob{position:absolute;left:3px;top:3px;bottom:3px;width:58px;border:0;border-radius:11px;background:linear-gradient(180deg,#b4cfff,var(--green));color:#0a1633;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;box-shadow:0 3px 0 var(--green-d),0 8px 20px -6px rgba(122,168,255,.6)}
+.cp-slider.moving .cp-knob{cursor:grabbing}
+.cp-slider.busy .cp-knob{opacity:.7;cursor:wait}
+.cp-slider.shake{animation:cpshake .4s}
+@keyframes cpshake{20%,60%{translate:-6px 0}40%,80%{translate:6px 0}}
+.cp-another{align-self:center;background:none;border:0;color:var(--muted);font:inherit;font-size:15px;cursor:pointer;padding:6px 10px;border-radius:8px}
+.cp-another:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.cp-privacy{font-size:12.5px;color:var(--dim);text-align:center}
+
+/* Fin */
 .vf-msg{font-size:14px;padding:10px 14px;border-radius:10px}
 .vf-msg.bad{background:rgba(255,110,110,.12);border:1px solid rgba(255,110,110,.4);color:#ffb3b3}
-.vf-trap{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
-.vf-end{align-items:flex-start}
+.vf-end{display:flex;flex-direction:column;align-items:flex-start;gap:12px}
 .vf-end h2{font-size:22px;font-weight:750}
 .vf-end p{color:var(--muted);font-size:15px}
 .vf-badge{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;font-family:var(--pix);font-size:20px}
 .vf-badge.ok{background:rgba(29,224,98,.14);color:#1de062;border:1px solid rgba(29,224,98,.4)}
 .vf-badge.bad{background:rgba(255,110,110,.14);color:#ff6e6e;border:1px solid rgba(255,110,110,.4)}
-.vf-end.ok{border-color:rgba(29,224,98,.35)}
+.vf-hint{font-size:12.5px;color:var(--dim)}
+.vf-detail{font-size:12px;color:var(--dim);background:#0b1224;border:1px solid var(--line-2);border-radius:8px;padding:6px 10px;word-break:break-word}
 
 /* Dans Discord (Activité) : seulement la carte, sans navigation ni pied de page */
 .activity .nav,.activity .foot,.activity .fog-divider{display:none}
-.activity .vf-hero{min-height:100vh;padding-top:32px}
-.vf-wait{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:15px}
-.vf-spin{width:18px;height:18px;border-radius:50%;border:2px solid var(--line-2);border-top-color:var(--accent);animation:vfspin .8s linear infinite}
-@keyframes vfspin{to{transform:rotate(360deg)}}
-.vf-end:not([hidden]){display:flex;flex-direction:column;gap:14px}
-.vf-detail{font-size:12px;color:var(--dim);background:#0b1224;border:1px solid var(--line-2);border-radius:8px;padding:6px 10px;word-break:break-word}
-.vf-card [hidden]{display:none!important}
+.activity .vf-hero{min-height:100vh;margin-top:0;padding:20px 0 40px}
 
-/* Formulaire de l'Activité (dans la carte) : mêmes espacements que la page /verify */
-#vf-form:not([hidden]){display:flex;flex-direction:column;gap:16px}
-.vf-actions{margin-top:4px}
+@media (max-width:560px){
+  .cp{padding:18px;gap:16px}
+  .cp-steps li{font-size:12px}
+}
