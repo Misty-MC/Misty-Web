@@ -1,5 +1,5 @@
 //! Page de statut : l'état des services dont Misty a besoin, vérifiés par le site lui-même.
-//! Une case = un jour (30 jours), disponibilité globale, et les incidents des 90 derniers jours.
+//! Une case = une minute (la dernière heure), disponibilité sur 30 jours, et les incidents des 90 derniers jours.
 
 use super::layout::{self, Head, Page};
 use crate::format;
@@ -131,20 +131,22 @@ fn ligne(p: &Page, l: &Ligne) -> Markup {
                 }
             }
             div.st-bars {
-                @for (date, jour) in &l.historique {
-                    @let quand = format::jour(tr, *date, true);
-                    @match jour {
-                        Some(j) => {
-                            i.(j.etat().slug()) title=(format!("{quand} · {} · {}", pourcent(p, j.dispo()), tr.st_checks.replace("{0}", &j.total().to_string()))) {}
+                @for (debut, mesure) in &l.minutes {
+                    @let quand = heure(*debut);
+                    @match mesure {
+                        Some(m) => {
+                            @let etat = match m.etat { Etat::EnLigne => &tr.st_up, Etat::Lent => &tr.st_slow, Etat::HorsLigne => &tr.st_down };
+                            @let ms = m.ms.map(|ms| format!(" · {ms} ms")).unwrap_or_default();
+                            i.(m.etat.slug()) data-t=(debut) title=(format!("{quand} · {etat}{ms}")) {}
                         }
-                        None => { i.none title=(format!("{quand} · {}", tr.st_no_data)) {} }
+                        None => { i.none data-t=(debut) title=(format!("{quand} · {}", tr.st_no_data)) {} }
                     }
                 }
             }
             div.st-legend {
-                span { (tr.st_days_ago) }
+                span { (tr.st_hour_ago) }
                 span.ms { @if let Some(ms) = l.actuel.and_then(|m| m.latence) { (ms.as_millis()) " ms" } }
-                span { (tr.st_today) }
+                span { (tr.st_now) }
             }
         }
     }
@@ -171,6 +173,12 @@ fn incident(p: &Page, i: &Incident) -> Markup {
             }
         }
     }
+}
+
+/// « 14:03 UTC » (le navigateur la remplace par l'heure locale).
+fn heure(unix: i64) -> String {
+    let t = time::OffsetDateTime::from_unix_timestamp(unix).unwrap_or(time::OffsetDateTime::UNIX_EPOCH);
+    format!("{:02}:{:02} UTC", t.hour(), t.minute())
 }
 
 /// « 3 min », « 2 h 05 ».

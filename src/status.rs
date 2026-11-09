@@ -6,13 +6,14 @@
 //! - lent : réponse plus lente, ou 429 (trop de requêtes) ;
 //! - hors ligne : pas de réponse, délai dépassé, ou erreur 5xx.
 //!
-//! Les vérifications sont comptées par jour (UTC) : une case de l'historique = un jour, sur 30 jours.
+//! Les vérifications sont gardées une par une pour l'historique affiché (une case = une minute, sur
+//! la dernière heure) et comptées par jour (UTC) pour la disponibilité sur 30 jours.
 //! Un incident s'ouvre après plusieurs vérifications ratées de suite et se ferme quand le service
 //! répond de nouveau ; on garde ceux des 90 derniers jours. Tout est enregistré sur le disque
 //! (`MISTY_CACHE_DIR`, sinon le dossier temporaire) pour survivre aux redémarrages.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime};
@@ -21,8 +22,10 @@ use time::{Date, OffsetDateTime};
 const INTERVALLE: Duration = Duration::from_secs(60);
 const DELAI: Duration = Duration::from_secs(6);
 const LENT: Duration = Duration::from_millis(2500);
-/// Cases de l'historique (jours)
+/// Jours comptés pour la disponibilité
 pub const JOURS: usize = 30;
+/// Cases de l'historique affiché : une par minute
+pub const MINUTES: usize = 60;
 /// Durée de l'historique des incidents (jours)
 pub const JOURS_INCIDENTS: i64 = 90;
 /// Vérifications ratées de suite avant d'ouvrir un incident (hors ligne, puis lent)
@@ -31,7 +34,8 @@ const SEUIL_LENTEUR: u32 = 5;
 /// Vérifications réussies de suite pour le refermer
 const SEUIL_RETOUR: u32 = 2;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Etat {
     EnLigne,
     Lent,
@@ -106,6 +110,16 @@ pub struct Mesure {
     pub latence: Option<Duration>,
 }
 
+/// Une vérification gardée pour l'historique à la minute.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Minute {
+    /// Secondes Unix
+    pub t: i64,
+    pub etat: Etat,
+    /// Latence en millisecondes
+    pub ms: Option<u32>,
+}
+
 /// Vérifications d'un service pendant un jour (UTC).
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Jour {
@@ -153,6 +167,9 @@ pub struct Incident {
 struct Donnees {
     /// service → date (AAAA-MM-JJ) → compteurs
     jours: HashMap<String, HashMap<String, Jour>>,
+    /// service → dernières vérifications (une par minute)
+    #[serde(default)]
+    minutes: HashMap<String, VecDeque<Minute>>,
     incidents: Vec<Incident>,
 }
 
@@ -162,7 +179,9 @@ pub struct Ligne {
     pub index: usize,
     pub actuel: Option<Mesure>,
     /// Les 30 derniers jours, du plus ancien à aujourd'hui
-    pub historique: Vec<(Date, Option<Jour>)>,
+    pub jours: Vec<(Date, Option<Jour>)>,
+    /// Les 60 dernières minutes, de la plus ancienne à maintenant (début de la minute, mesure)
+    pub minutes: Vec<(i64, Option<Minute>)>,
     /// Disponibilité sur 30 jours, en %
     pub dispo: Option<f32>,
 }
@@ -262,6 +281,12 @@ impl Status {
                 Etat::Lent => compteurs.slow += 1,
                 Etat::HorsLigne => compteurs.down += 1,
             }
+            let minutes = donnees.minutes.entry(nom.to_string()).or_default();
+            let ms = m.latence.map(|d| d.as_millis().min(u32::MAX as u128) as u32);
+            minutes.push_back(Minute { t: horodatage, etat: m.etat, ms });
+            while minutes.len() > MINUTES * 2 {
+                minutes.pop_front();
+            }
             // incidents
             let s = &mut series[i];
             match m.etat {
@@ -315,24 +340,37 @@ impl Status {
     }
 
     pub fn lignes(&self) -> Vec<Ligne> {
+        self.lignes_a(OffsetDateTime::now_utc().unix_timestamp())
+    }
+
+    fn lignes_a(&self, maintenant: i64) -> Vec<Ligne> {
         let donnees = self.donnees.lock().unwrap();
         let actuel = self.actuel.lock().unwrap();
-        let today = aujourd_hui();
+        let today = OffsetDateTime::from_unix_timestamp(maintenant).map(|t| t.date()).unwrap_or_else(|_| aujourd_hui());
+        let minute = maintenant.div_euclid(60);
         SERVICES
             .iter()
             .enumerate()
             .map(|(index, s)| {
-                let jours = donnees.jours.get(s.nom);
-                let historique: Vec<(Date, Option<Jour>)> = (0..JOURS)
+                let compteurs = donnees.jours.get(s.nom);
+                let jours: Vec<(Date, Option<Jour>)> = (0..JOURS)
                     .rev()
                     .map(|n| {
                         let d = today - time::Duration::days(n as i64);
-                        (d, jours.and_then(|j| j.get(&d.to_string())).copied())
+                        (d, compteurs.and_then(|j| j.get(&d.to_string())).copied())
                     })
                     .collect();
-                let somme = historique.iter().filter_map(|(_, j)| *j).fold(Jour::default(), Jour::plus);
+                let mesures = donnees.minutes.get(s.nom);
+                let minutes: Vec<(i64, Option<Minute>)> = (0..MINUTES as i64)
+                    .rev()
+                    .map(|n| {
+                        let m = minute - n;
+                        (m * 60, mesures.and_then(|v| v.iter().rev().find(|x| x.t.div_euclid(60) == m)).copied())
+                    })
+                    .collect();
+                let somme = jours.iter().filter_map(|(_, j)| *j).fold(Jour::default(), Jour::plus);
                 let dispo = (somme.total() > 0).then(|| somme.dispo());
-                Ligne { index, actuel: actuel[index], historique, dispo }
+                Ligne { index, actuel: actuel[index], jours, minutes, dispo }
             })
             .collect()
     }
@@ -394,14 +432,30 @@ mod tests {
     }
 
     #[test]
+    fn historique_par_minute() {
+        let s = status_vide("misty-status-test-minutes.json");
+        let t0 = OffsetDateTime::now_utc();
+        s.enregistrer(&tour(Etat::HorsLigne), t0 - time::Duration::minutes(2));
+        s.enregistrer(&tour(Etat::EnLigne), t0);
+        let l = &s.lignes_a(t0.unix_timestamp())[0];
+        assert_eq!(l.minutes.len(), MINUTES);
+        let (debut, derniere) = *l.minutes.last().unwrap();
+        assert_eq!(debut, t0.unix_timestamp().div_euclid(60) * 60);
+        assert_eq!(derniere.map(|m| m.etat), Some(Etat::EnLigne));
+        assert_eq!(l.minutes[MINUTES - 3].1.map(|m| m.etat), Some(Etat::HorsLigne));
+        assert!(l.minutes[MINUTES - 2].1.is_none());
+        assert!(l.minutes[0].1.is_none());
+    }
+
+    #[test]
     fn historique_par_jour() {
         let s = status_vide("misty-status-test-jours.json");
         s.enregistrer(&tour(Etat::EnLigne), OffsetDateTime::now_utc());
         let l = &s.lignes()[0];
-        assert_eq!(l.historique.len(), JOURS);
-        assert_eq!(l.historique.last().unwrap().0, aujourd_hui());
-        assert_eq!(l.historique.last().unwrap().1, Some(Jour { up: 1, slow: 0, down: 0 }));
-        assert!(l.historique[0].1.is_none());
+        assert_eq!(l.jours.len(), JOURS);
+        assert_eq!(l.jours.last().unwrap().0, aujourd_hui());
+        assert_eq!(l.jours.last().unwrap().1, Some(Jour { up: 1, slow: 0, down: 0 }));
+        assert!(l.jours[0].1.is_none());
         assert_eq!(l.dispo, Some(100.0));
         assert_eq!(s.dispo_globale(), Some(100.0));
     }

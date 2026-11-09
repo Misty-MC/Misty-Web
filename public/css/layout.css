@@ -26,6 +26,8 @@
 .gh{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--muted);padding:7px 9px;border-radius:8px}
 .gh:hover{color:var(--text)}
 .gh .ic{width:17px;height:17px}
+.gh.dc .ic{width:19px;height:19px}
+.gh.dc:hover{color:#8b97ff}
 
 /* Menu de langue en relief, tout à droite */
 .langdd{position:relative;order:2}
@@ -78,6 +80,13 @@
 .fcols ul a:hover{color:var(--text)}
 .fcols ul a .ic{width:13px;height:13px;opacity:.6}
 .fcols .about p{font-size:13.5px;color:var(--muted)}
+.discord-cta{display:flex;align-items:center;gap:12px;margin-top:16px;padding:12px 14px;border-radius:12px;background:linear-gradient(90deg,rgba(88,101,242,.18),rgba(88,101,242,.06));border:1px solid rgba(88,101,242,.4);color:var(--text);transition:border-color .2s,transform .2s,background .2s}
+.discord-cta:hover{border-color:rgba(88,101,242,.75);background:linear-gradient(90deg,rgba(88,101,242,.28),rgba(88,101,242,.1));transform:translateY(-1px)}
+.discord-cta>.ic:first-child{width:26px;height:26px;color:#8b97ff;flex:none}
+.discord-cta span{display:flex;flex-direction:column;min-width:0;flex:1}
+.discord-cta strong{font-size:14px;font-weight:650}
+.discord-cta small{font-size:12.5px;color:var(--muted)}
+.discord-cta>.ic:last-child{width:13px;height:13px;opacity:.6;flex:none}
 .flangs{display:flex;flex-wrap:wrap;gap:6px}
 .flangs a{font-family:var(--pix);font-size:11px;padding:6px 9px;border-radius:8px;background:var(--panel);border:1px solid var(--line);color:var(--muted);box-shadow:0 3px 0 #060a14;transition:.15s}
 .flangs a:hover{color:var(--text);border-color:var(--line-2)}

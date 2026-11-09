@@ -421,11 +421,16 @@ pub async fn status_json(State(state): State<Arc<AppState>>) -> Response {
                 "state": l.actuel.map(|m| m.etat.slug()),
                 "latency_ms": l.actuel.and_then(|m| m.latence).map(|d| d.as_millis() as u64),
                 "uptime_30d_percent": l.dispo,
-                "days": l.historique.iter().map(|(d, j)| serde_json::json!({
+                "days": l.jours.iter().map(|(d, j)| serde_json::json!({
                     "date": d.to_string(),
                     "state": j.map(|j| j.etat().slug()),
                     "uptime_percent": j.map(|j| j.dispo()),
                     "checks": j.map(|j| j.total()).unwrap_or(0),
+                })).collect::<Vec<_>>(),
+                "minutes": l.minutes.iter().map(|(t, m)| serde_json::json!({
+                    "start": t,
+                    "state": m.map(|m| m.etat.slug()),
+                    "latency_ms": m.and_then(|m| m.ms),
                 })).collect::<Vec<_>>(),
             })
         })

@@ -30,7 +30,7 @@
 .st-ghead p{font-size:13.5px;color:var(--dim)}
 .st-list{display:grid;gap:10px}
 
-/* Un service : nom, état, puis l'historique (une case par jour) */
+/* Un service : nom, état, puis l'historique (une case par minute, sur une heure) */
 .st-row{padding:16px 20px 12px;border-radius:14px;background:rgba(17,26,48,.72);border:1px solid var(--line-2);transition:border-color .2s}
 .st-row:hover{border-color:rgba(255,255,255,.14)}
 .st-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}
@@ -46,8 +46,8 @@
 .st-state.wait{color:var(--dim)}
 .st-num{font-size:13px;font-weight:650;color:var(--text);min-width:64px;text-align:right}
 
-.st-bars{display:flex;gap:3px;height:30px;align-items:stretch}
-.st-bars i{flex:1;min-width:3px;border-radius:3px;background:rgba(255,255,255,.07);transition:transform .15s,filter .15s;cursor:default}
+.st-bars{display:flex;gap:2px;height:30px;align-items:stretch}
+.st-bars i{flex:1;min-width:2px;border-radius:2px;background:rgba(255,255,255,.07);transition:transform .15s,filter .15s;cursor:default}
 .st-bars i.up{background:#1de062;opacity:.8}
 .st-bars i.slow{background:#ffbe5a}
 .st-bars i.down{background:#ff6e6e}
@@ -74,6 +74,6 @@
 @media (max-width:760px){
   .st-kpi{flex:1 1 100%}
   .st-top{flex-direction:column;gap:8px}
-  .st-bars{gap:2px;height:24px}
-  .st-bars i{min-width:2px}
+  .st-bars{gap:1px;height:24px}
+  .st-bars i{min-width:1px;border-radius:1px}
 }
