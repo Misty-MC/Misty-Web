@@ -25,6 +25,7 @@ mod docs;
 mod format;
 mod github;
 mod miroir;
+mod presence;
 mod i18n;
 mod markdown;
 mod routes;
@@ -59,6 +60,8 @@ pub struct AppState {
     pub fog_strip: String,
     /// Télémétrie du launcher et rapports de logs.
     pub telemetrie: Arc<telemetrie::Telemetrie>,
+    /// Launchers ouverts en ce moment (/api/online).
+    pub presence: presence::Presence,
     /// Salon Discord de l'équipe (rapports, résumé du jour).
     pub discord: Arc<discord::Discord>,
     /// Captcha de vérification des serveurs Discord qui utilisent Misty Bot.
@@ -86,6 +89,7 @@ async fn main() {
         )),
         status: Arc::new(status::Status::new()),
         telemetrie: Arc::new(telemetrie::Telemetrie::new()),
+        presence: presence::Presence::new(),
         discord: Arc::new(discord::Discord::new()),
         verification: Arc::new(verify::Verification::new()),
         scene: scene::render(&scene::SceneOptions {
@@ -139,6 +143,11 @@ async fn main() {
         .route("/activity/start", post(routes::activity_start))
         .route("/activity/log", post(routes::activity_log).layer(DefaultBodyLimit::max(2 * 1024)))
         .route("/api/verify/config", post(routes::verify_config).layer(DefaultBodyLimit::max(4 * 1024)))
+        .route(
+            "/api/presence",
+            post(presence::signe).layer(DefaultBodyLimit::max(2 * 1024)),
+        )
+        .route("/api/online", get(presence::en_ligne))
         .route(
             "/api/telemetry",
             post(telemetrie::evenement).layer(DefaultBodyLimit::max(32 * 1024)),
