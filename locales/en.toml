@@ -289,3 +289,4 @@ vf_role_p = "The captcha is solved, but the bot couldn't give you the role (miss
 vf_loading = "Connecting to Discord…"
 vf_close = "Close"
 vf_auth_p = "Discord didn't share your account. Close the activity and click Verify again."
+vf_auth_t = "Couldn't connect to Discord"

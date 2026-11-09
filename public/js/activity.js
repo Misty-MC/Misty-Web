@@ -25,13 +25,22 @@ function end(ok, title, text) {
   $("vf-text").textContent = text;
 }
 
-function fail(error) {
+function fail(error, detail) {
   const map = {
     off: [d.offTitle, d.off], guild: [d.offTitle, d.off], many: [d.badTitle, d.many],
-    role: [d.roleTitle, d.role], auth: [d.badTitle, d.auth], expired: [d.badTitle, d.bad],
+    role: [d.roleTitle, d.role], auth: [d.authTitle, d.auth], expired: [d.badTitle, d.bad],
   };
-  const [title, text] = map[error] || [d.badTitle, d.auth];
+  const [title, text] = map[error] || [d.authTitle, d.auth];
   end(false, title, text);
+  $("vf-detail").textContent = detail || "";
+  $("vf-detail").hidden = !detail;
+}
+
+// Erreur côté Discord : notée dans les logs du site, pour savoir ce qui bloque.
+function report(stage, err) {
+  const detail = `${stage}: ${err && (err.code !== undefined ? err.code + " " : "")}${(err && err.message) || err}`;
+  post("/activity/log", { detail }).catch(() => {});
+  return detail;
 }
 
 function showCaptcha(id, wrong) {
@@ -65,9 +74,12 @@ $("vf-close").addEventListener("click", () => {
 
 (async () => {
   if (!d.client) return fail("off");
+  let stage = "sdk";
   try {
     sdk = new DiscordSDK(d.client);
+    stage = "ready";
     await sdk.ready();
+    stage = "authorize";
     const { code } = await sdk.commands.authorize({
       client_id: d.client,
       response_type: "code",
@@ -75,13 +87,13 @@ $("vf-close").addEventListener("click", () => {
       prompt: "none",
       scope: ["identify"],
     });
+    stage = "start";
     const r = await post("/activity/start", { code, guild_id: sdk.guildId });
     if (r.token && r.captcha) {
       token = r.token;
       showCaptcha(r.captcha, false);
-    } else fail(r.error);
+    } else fail(r.error, r.error === "auth" ? "start: token" : "");
   } catch (err) {
-    console.error(err);
-    fail("auth");
+    fail("auth", report(stage, err));
   }
 })();

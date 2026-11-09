@@ -136,6 +136,7 @@ async fn main() {
         .route("/activity/start", post(routes::activity_start))
         .route("/activity/new", post(routes::activity_new))
         .route("/activity/answer", post(routes::activity_answer))
+        .route("/activity/log", post(routes::activity_log).layer(DefaultBodyLimit::max(2 * 1024)))
         .route("/api/verify/config", post(routes::verify_config).layer(DefaultBodyLimit::max(4 * 1024)))
         .route(
             "/api/telemetry",

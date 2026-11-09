@@ -289,3 +289,4 @@ vf_role_p = "Il captcha è corretto, ma il bot non ha potuto darti il ruolo (man
 vf_loading = "Connessione a Discord…"
 vf_close = "Chiudi"
 vf_auth_p = "Discord non ha condiviso il tuo account. Chiudi l'attività e clicca di nuovo su Verifica."
+vf_auth_t = "Connessione a Discord non riuscita"

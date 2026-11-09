@@ -710,3 +710,15 @@ pub async fn verify_config(State(state): State<Arc<AppState>>, headers: HeaderMa
         StatusCode::UNAUTHORIZED.into_response()
     }
 }
+
+#[derive(Deserialize)]
+pub struct ActivityLog {
+    detail: String,
+}
+
+/// Erreur rencontrée dans Discord par la page `/activity` (notée dans les logs du site).
+pub async fn activity_log(Json(b): Json<ActivityLog>) -> StatusCode {
+    let detail: String = b.detail.chars().filter(|c| !c.is_control()).take(300).collect();
+    eprintln!("Activité (navigateur) : {detail}");
+    StatusCode::NO_CONTENT
+}
