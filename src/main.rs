@@ -9,7 +9,13 @@
 //! - `SKIN_API` (`https://mc-heads.net` par défaut) : service qui fournit les skins (boutique)
 //! - `GITHUB_API` (`https://api.github.com` par défaut) : utile pour tester avec une fausse API
 //! - `GITHUB_WEB` (`https://github.com` par défaut) : flux Atom et fichiers des releases
+//! - `MISTY_CACHE_DIR` (dossier temporaire par défaut) : caches, statut, copie des versions, télémétrie
+//! - `DISCORD_WEBHOOK` (facultatif) : webhook d'un salon privé de l'équipe, qui reçoit les rapports
+//!   de logs et le résumé quotidien de la télémétrie
+//! - `TELEMETRY_TOKEN` (facultatif, 16 caractères ou plus) : ouvre la lecture de la télémétrie
+//!   (`/api/telemetry/summary`, `/api/telemetry/report/{code}`) avec `Authorization: Bearer …`
 
+mod discord;
 mod docs;
 mod format;
 mod github;
@@ -21,11 +27,13 @@ mod scene;
 mod seo;
 mod skins;
 mod status;
+mod telemetrie;
 mod views;
 
 use axum::Router;
 use axum::http::{HeaderValue, header};
-use axum::routing::get;
+use axum::extract::DefaultBodyLimit;
+use axum::routing::{get, post};
 use std::sync::Arc;
 use tower_http::compression::CompressionLayer;
 use tower_http::compression::predicate::{NotForContentType, Predicate};
@@ -44,6 +52,10 @@ pub struct AppState {
     pub skins: skins::Skins,
     /// Bande de brume pixel, insérée entre les sections.
     pub fog_strip: String,
+    /// Télémétrie du launcher et rapports de logs.
+    pub telemetrie: Arc<telemetrie::Telemetrie>,
+    /// Salon Discord de l'équipe (rapports, résumé du jour).
+    pub discord: Arc<discord::Discord>,
 }
 
 fn env_or(key: &str, default: &str) -> String {
@@ -66,6 +78,8 @@ async fn main() {
             std::env::var("GITHUB_TOKEN").ok().filter(|t| !t.is_empty()),
         )),
         status: Arc::new(status::Status::new()),
+        telemetrie: Arc::new(telemetrie::Telemetrie::new()),
+        discord: Arc::new(discord::Discord::new()),
         scene: scene::render(&scene::SceneOptions {
             seed: 7,
             moon_x: 0.8,
@@ -81,6 +95,8 @@ async fn main() {
     // Tâches de fond : releases GitHub (les pages ne lisent que le cache) et page de statut
     tokio::spawn(state.github.clone().rafraichir_en_boucle());
     tokio::spawn(state.status.clone().verifier_en_boucle());
+    tokio::spawn(state.telemetrie.clone().menage_en_boucle());
+    tokio::spawn(state.discord.clone().resume_en_boucle(state.telemetrie.dossier()));
 
     let static_files = ServeDir::new(env_or("MISTY_PUBLIC_DIR", "public"))
         .not_found_service(get(routes::not_found).with_state(state.clone()));
@@ -107,6 +123,16 @@ async fn main() {
         .route("/status.json", get(routes::status_json))
         .route("/api/latest", get(routes::api_latest))
         .route("/download/{kind}", get(routes::download))
+        .route(
+            "/api/telemetry",
+            post(telemetrie::evenement).layer(DefaultBodyLimit::max(32 * 1024)),
+        )
+        .route(
+            "/api/telemetry/report",
+            post(telemetrie::rapport).layer(DefaultBodyLimit::max(1024 * 1024)),
+        )
+        .route("/api/telemetry/summary", get(telemetrie::resume))
+        .route("/api/telemetry/report/{code}", get(telemetrie::lire_rapport))
         .fallback_service(static_files)
         // les téléchargements (zip, exe) sont déjà compressés : sans recompression, leur taille
         // reste annoncée (barre de progression du navigateur et de la mise à jour du launcher)
