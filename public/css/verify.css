@@ -29,3 +29,7 @@
 .vf-end:not([hidden]){display:flex;flex-direction:column;gap:14px}
 .vf-detail{font-size:12px;color:var(--dim);background:#0b1224;border:1px solid var(--line-2);border-radius:8px;padding:6px 10px;word-break:break-word}
 .vf-card [hidden]{display:none!important}
+
+/* Formulaire de l'Activité (dans la carte) : mêmes espacements que la page /verify */
+#vf-form:not([hidden]){display:flex;flex-direction:column;gap:16px}
+.vf-actions{margin-top:4px}
