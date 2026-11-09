@@ -286,3 +286,6 @@ vf_off_p = "Verification isn't set up on this website yet. Let the server staff 
 vf_many_p = "Too many attempts. Click Verify again in Discord to get a new link."
 vf_role_title = "Couldn't give the role"
 vf_role_p = "The captcha is solved, but the bot couldn't give you the role (missing Manage Roles permission or role order). Let the server staff know."
+vf_loading = "Connecting to Discord…"
+vf_close = "Close"
+vf_auth_p = "Discord didn't share your account. Close the activity and click Verify again."

@@ -75,3 +75,60 @@ fn fin(classe: &str, titre: &str, texte: &str) -> Markup {
         }
     }
 }
+
+/// Page ouverte dans Discord (Activité) : tout se passe ici, sans changer de page, pour garder la
+/// connexion au SDK Discord (`/js/activity.js`).
+pub fn activite(p: &Page, client_id: Option<&str>) -> Markup {
+    let tr = p.tr;
+    let v = super::layout::ASSET_VERSION.as_str();
+    let main = html! {
+        section.hero.pn-hero.vf-hero {
+            div.wrap { div.pn-copy {
+                div.tags { span { (tr.vf_label) } }
+                h1 { (tr.vf_h1_1) " " span.accent { (tr.vf_h1_2) } }
+                p.sub { (tr.vf_sub) }
+                div #vf-app.vf-card
+                    data-client=[client_id]
+                    data-wrong=(tr.vf_wrong) data-off=(tr.vf_off_p) data-many=(tr.vf_many_p)
+                    data-role=(tr.vf_role_p) data-auth=(tr.vf_auth_p) data-bad=(tr.vf_bad_p)
+                    data-bad-title=(tr.vf_bad_title) data-off-title=(tr.vf_off_title) data-role-title=(tr.vf_role_title)
+                {
+                    p.vf-wait #vf-wait { span.vf-spin {} (tr.vf_loading) }
+                    form #vf-form hidden autocomplete="off" {
+                        img.vf-img #vf-img width="330" height="100" alt=(tr.vf_input);
+                        p.vf-msg.bad #vf-err role="alert" hidden {}
+                        label.vf-field {
+                            span { (tr.vf_input) }
+                            input #vf-code type="text" required maxlength="12" autocapitalize="characters" spellcheck="false";
+                        }
+                        div.vf-actions {
+                            button.btn.play type="submit" { (tr.vf_submit) }
+                            button.btn.ghost #vf-new type="button" { (tr.vf_new) }
+                        }
+                        p.vf-hint { (tr.vf_hint) }
+                    }
+                    div.vf-end #vf-end hidden {
+                        span.vf-badge #vf-badge {}
+                        h2 #vf-title {}
+                        p #vf-text {}
+                        button.btn.ghost #vf-close type="button" { (tr.vf_close) }
+                    }
+                    div hidden #vf-ok data-title=(tr.vf_ok_title) data-text=(tr.vf_ok_p) {}
+                }
+                script type="module" src=(format!("/js/activity.js?v={v}")) {}
+            } }
+        }
+    };
+    layout::render(
+        p,
+        Head {
+            title: &tr.vf_title,
+            description: &tr.vf_sub,
+            jsonld: None,
+            css: &["home", "patch-notes", "verify"],
+            scripts: &[],
+            body_class: "verify-page activity",
+        },
+        main,
+    )
+}

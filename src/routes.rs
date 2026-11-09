@@ -67,7 +67,16 @@ pub async fn index(
     State(state): State<Arc<AppState>>,
     Query(q): Query<PageQuery>,
     headers: HeaderMap,
+    uri: Uri,
 ) -> Response {
+    // Ouvert comme Activité Discord (`<application>.discordsays.com/?instance_id=…&frame_id=…`) :
+    // direction la vérification, en gardant les paramètres que lit le SDK Discord.
+    if let Some(query) = uri.query()
+        && query.contains("frame_id=")
+        && query.contains("instance_id=")
+    {
+        return redirection(&format!("/activity?{query}"));
+    }
     let (lang, remember) = i18n::negotiate(q.lang.as_deref(), &headers);
     let releases = state.github.releases().await;
     let latest = releases.as_deref().and_then(|l| github::latest(l));
@@ -585,5 +594,119 @@ pub async fn verify_captcha(State(state): State<Arc<AppState>>, Path(file): Path
             res
         }
         None => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+// ---------- Vérification dans Discord (Activité) ----------
+
+#[derive(Deserialize, Default)]
+pub struct ActivityQuery {
+    guild_id: Option<String>,
+    lang: Option<String>,
+}
+
+/// `/activity` : la page ouverte dans Discord.
+pub async fn activity_page(State(state): State<Arc<AppState>>, Query(q): Query<ActivityQuery>, headers: HeaderMap) -> Response {
+    // langue du serveur Discord (envoyée par le bot), sinon celle du navigateur
+    let lang = q
+        .lang
+        .as_deref()
+        .and_then(Lang::from_code)
+        .or_else(|| q.guild_id.as_deref().and_then(|g| state.verification.config(g)).and_then(|c| Lang::from_code(&c.lang)))
+        .unwrap_or_else(|| i18n::negotiate(None, &headers).0);
+    let p = page(&state, lang, "/activity", None);
+    let client = state.verification.activite_active().then(|| state.verification.client_id()).flatten();
+    let mut res = html_response(StatusCode::OK, verify_view::activite(&p, client), lang, false);
+    let h = res.headers_mut();
+    h.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    h.insert("x-robots-tag", HeaderValue::from_static("noindex"));
+    res
+}
+
+#[derive(Deserialize)]
+pub struct ActivityStart {
+    code: String,
+    guild_id: Option<String>,
+}
+
+fn erreur(code: &str) -> Response {
+    Json(serde_json::json!({ "error": code })).into_response()
+}
+
+/// Début : qui est le membre (code OAuth2), lien signé pour son serveur, première image.
+pub async fn activity_start(State(state): State<Arc<AppState>>, Json(b): Json<ActivityStart>) -> Response {
+    let v = &state.verification;
+    if !v.activite_active() {
+        return erreur("off");
+    }
+    let Some(guild) = b.guild_id.filter(|g| !g.is_empty()) else {
+        return erreur("guild");
+    };
+    let user = match v.membre(&b.code).await {
+        Ok(u) => u,
+        Err(e) => {
+            eprintln!("Activité : autorisation Discord refusée : {e}");
+            return erreur("auth");
+        }
+    };
+    let Some(token) = v.lien_pour(&guild, user) else {
+        return erreur("guild");
+    };
+    match v.nouveau_defi(&token) {
+        Some(captcha) => Json(serde_json::json!({ "token": token, "captcha": captcha })).into_response(),
+        None => erreur("many"),
+    }
+}
+
+#[derive(Deserialize)]
+pub struct ActivityNew {
+    t: String,
+}
+
+pub async fn activity_new(State(state): State<Arc<AppState>>, Json(b): Json<ActivityNew>) -> Response {
+    if state.verification.lien(&b.t).is_none() {
+        return erreur("expired");
+    }
+    match state.verification.nouveau_defi(&b.t) {
+        Some(captcha) => Json(serde_json::json!({ "captcha": captcha })).into_response(),
+        None => erreur("many"),
+    }
+}
+
+#[derive(Deserialize)]
+pub struct ActivityAnswer {
+    t: String,
+    id: String,
+    code: String,
+}
+
+pub async fn activity_answer(State(state): State<Arc<AppState>>, Json(b): Json<ActivityAnswer>) -> Response {
+    let v = &state.verification;
+    let Some(claims) = v.lien(&b.t) else {
+        return erreur("expired");
+    };
+    use crate::verify::Reponse;
+    match v.repondre(&b.id, &b.t, &b.code) {
+        Reponse::Juste => match v.donner_role(&claims).await {
+            Ok(()) => Json(serde_json::json!({ "ok": true })).into_response(),
+            Err(e) => {
+                eprintln!("Activité : rôle non donné (serveur {}) : {e}", claims.guild);
+                erreur("role")
+            }
+        },
+        Reponse::Faux | Reponse::Perime => match v.nouveau_defi(&b.t) {
+            Some(captcha) => Json(serde_json::json!({ "ok": false, "captcha": captcha })).into_response(),
+            None => erreur("many"),
+        },
+    }
+}
+
+/// `/api/verify/config` : le bot envoie la config de vérification d'un serveur (signée).
+pub async fn verify_config(State(state): State<Arc<AppState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+    let sig = headers.get("x-misty-signature").and_then(|v| v.to_str().ok()).unwrap_or("");
+    if state.verification.recevoir_config(&body, sig) {
+        StatusCode::NO_CONTENT.into_response()
+    } else {
+        StatusCode::UNAUTHORIZED.into_response()
     }
 }

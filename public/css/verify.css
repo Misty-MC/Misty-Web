@@ -19,3 +19,12 @@
 .vf-badge.ok{background:rgba(29,224,98,.14);color:#1de062;border:1px solid rgba(29,224,98,.4)}
 .vf-badge.bad{background:rgba(255,110,110,.14);color:#ff6e6e;border:1px solid rgba(255,110,110,.4)}
 .vf-end.ok{border-color:rgba(29,224,98,.35)}
+
+/* Dans Discord (Activité) : seulement la carte, sans navigation ni pied de page */
+.activity .nav,.activity .foot,.activity .fog-divider{display:none}
+.activity .vf-hero{min-height:100vh;padding-top:32px}
+.vf-wait{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:15px}
+.vf-spin{width:18px;height:18px;border-radius:50%;border:2px solid var(--line-2);border-top-color:var(--accent);animation:vfspin .8s linear infinite}
+@keyframes vfspin{to{transform:rotate(360deg)}}
+.vf-end:not([hidden]){display:flex;flex-direction:column;gap:14px}
+.vf-card [hidden]{display:none!important}
