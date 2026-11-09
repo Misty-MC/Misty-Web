@@ -304,6 +304,7 @@ pub struct Tr {
     pub vf_close: String,
     pub vf_auth_p: String,
     pub vf_auth_t: String,
+    pub vf_autoclose: String,
     pub st_group_misty: String,
     pub st_group_minecraft: String,
     pub st_group_mods: String,

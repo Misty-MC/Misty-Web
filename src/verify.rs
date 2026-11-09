@@ -26,8 +26,8 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-/// Caractères sans ambiguïté (pas de 0/O, 1/I, 2/Z, 5/S, 8/B…).
-const ALPHABET: &[u8] = b"ACDEFHJKLMNPRTUVWXY3479";
+/// Caractères sans ambiguïté (pas de 0/O, 1/I, 2/Z, 5/S, 8/B, 6/E, U/V, N/M…).
+const ALPHABET: &[u8] = b"ACDEFHJKLMPRTVWXY3479";
 const LONGUEUR: usize = 5;
 const ESSAIS_PAR_IMAGE: u32 = 3;
 const IMAGES_PAR_LIEN: u32 = 10;
@@ -70,6 +70,8 @@ pub struct Claims {
     pub guild: u64,
     pub user: u64,
     pub role: u64,
+    /// Rôle retiré une fois vérifié
+    pub remove: Option<u64>,
     pub log: Option<u64>,
     pub expires: u64,
     /// `fr` ou `en`
@@ -91,16 +93,22 @@ pub fn verifier_lien(secret: &str, token: &str, maintenant: u64) -> Option<Claim
         return None;
     }
     let p: Vec<&str> = payload.split('.').collect();
-    let [v, g, u, r, log, exp, lang] = p.as_slice() else { return None };
+    // v1 : sans rôle à retirer ; v2 : avec (0 = aucun)
+    let (g, u, r, rm, log, exp, lang) = match p.as_slice() {
+        ["v1", g, u, r, log, exp, lang] => (g, u, r, &"0", log, exp, lang),
+        ["v2", g, u, r, rm, log, exp, lang] => (g, u, r, rm, log, exp, lang),
+        _ => return None,
+    };
     let c = Claims {
         guild: g.parse().ok()?,
         user: u.parse().ok()?,
         role: r.parse().ok()?,
+        remove: rm.parse().ok().filter(|r| *r != 0),
         log: log.parse().ok().filter(|l| *l != 0),
         expires: exp.parse().ok()?,
         lang: lang.to_string(),
     };
-    (*v == "v1" && c.expires > maintenant).then_some(c)
+    (c.expires > maintenant).then_some(c)
 }
 
 pub fn maintenant() -> u64 {
@@ -146,6 +154,8 @@ pub struct ConfigServeur {
     pub guild: String,
     pub enabled: bool,
     pub role: Option<String>,
+    #[serde(default)]
+    pub remove: Option<String>,
     pub log: Option<String>,
     pub lang: String,
 }
@@ -288,9 +298,10 @@ impl Verification {
         let secret = self.secret.as_deref()?;
         let c = self.config(guild).filter(|c| c.enabled)?;
         let payload = format!(
-            "v1.{}.{user}.{}.{}.{}.{}",
+            "v2.{}.{user}.{}.{}.{}.{}.{}",
             c.guild.parse::<u64>().ok()?,
             c.role.as_deref()?.parse::<u64>().ok()?,
+            c.remove.as_deref().and_then(|r| r.parse::<u64>().ok()).unwrap_or(0),
             c.log.as_deref().and_then(|l| l.parse::<u64>().ok()).unwrap_or(0),
             maintenant() + 600,
             c.lang
@@ -371,6 +382,22 @@ impl Verification {
             let code = r.status();
             let corps = r.text().await.unwrap_or_default();
             return Err(format!("Discord {code} : {}", corps.chars().take(200).collect::<String>()));
+        }
+        // rôle à retirer (facultatif) : une erreur n'empêche pas la vérification
+        if let Some(rm) = c.remove {
+            let url = format!("{}/guilds/{}/members/{}/roles/{rm}", self.api, c.guild, c.user);
+            match self
+                .http
+                .delete(url)
+                .header("Authorization", format!("Bot {token}"))
+                .header("X-Audit-Log-Reason", "Misty%20%3A%20captcha%20r%C3%A9ussi")
+                .send()
+                .await
+            {
+                Ok(r) if r.status().is_success() => {}
+                Ok(r) => eprintln!("Vérification : rôle à retirer non retiré (serveur {}) : {}", c.guild, r.status()),
+                Err(e) => eprintln!("Vérification : rôle à retirer non retiré (serveur {}) : {e}", c.guild),
+            }
         }
         if let Some(log) = c.log {
             let (titre, comment) = if c.lang == "fr" {
@@ -474,6 +501,11 @@ mod tests {
         assert!(verifier_lien("autre", &token, 0).is_none(), "mauvais secret");
         assert!(verifier_lien("secret", &token.replace("v1.42.7", "v1.42.8"), 0).is_none(), "modifié");
         assert!(verifier_lien("secret", "n'importe quoi", 0).is_none());
+        // v2 : avec le rôle à retirer (même vecteur que le test du bot)
+        let payload = "v2.42.7.9.4.5.2000.en";
+        let token = format!("{payload}.{}", signer("secret", payload));
+        let c = verifier_lien("secret", &token, 1999).unwrap();
+        assert_eq!((c.role, c.remove, c.log), (9, Some(4), Some(5)));
     }
 
     /// `PREVIEW_DIR=… cargo test apercu_captcha -- --ignored` : quelques images et leurs codes.
@@ -505,13 +537,13 @@ mod tests {
             serveurs: Mutex::default(),
             fichier_serveurs: std::env::temp_dir().join("misty-test-verify-guilds-2.json"),
         };
-        let corps = br#"{"guild":"42","enabled":true,"role":"9","log":null,"lang":"fr"}"#;
+        let corps = br#"{"guild":"42","enabled":true,"role":"9","remove":"3","log":null,"lang":"fr"}"#;
         assert!(!v.recevoir_config(corps, "mauvaise"));
         assert!(v.lien_pour("42", 7).is_none());
         assert!(v.recevoir_config(corps, &signer("s", std::str::from_utf8(corps).unwrap())));
         let lien = v.lien_pour("42", 7).unwrap();
         let c = verifier_lien("s", &lien, maintenant()).unwrap();
-        assert_eq!((c.guild, c.user, c.role, c.log, c.lang.as_str()), (42, 7, 9, None, "fr"));
+        assert_eq!((c.guild, c.user, c.role, c.remove, c.log, c.lang.as_str()), (42, 7, 9, Some(3), None, "fr"));
         assert!(v.lien_pour("43", 7).is_none(), "serveur inconnu");
     }
 

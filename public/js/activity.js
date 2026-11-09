@@ -57,7 +57,10 @@ function showCaptcha(id, wrong) {
 $("vf-form").addEventListener("submit", async e => {
   e.preventDefault();
   const r = await post("/activity/answer", { t: token, id: captcha, code: $("vf-code").value });
-  if (r.ok) end(true, $("vf-ok").dataset.title, $("vf-ok").dataset.text);
+  if (r.ok) {
+    end(true, $("vf-ok").dataset.title, $("vf-ok").dataset.text);
+    autoClose(10);
+  }
   else if (r.captcha) showCaptcha(r.captcha, true);
   else fail(r.error);
 });
@@ -68,9 +71,22 @@ $("vf-new").addEventListener("click", async () => {
   else fail(r.error);
 });
 
-$("vf-close").addEventListener("click", () => {
+const closeActivity = () => {
   if (sdk) sdk.close(1000, "done");
-});
+};
+$("vf-close").addEventListener("click", closeActivity);
+
+// Après la vérification : fermeture automatique, avec un compte à rebours.
+function autoClose(seconds) {
+  const label = $("vf-auto");
+  const tick = () => {
+    label.textContent = d.autoclose.replace("{0}", seconds);
+    label.hidden = false;
+    if (seconds-- <= 0) closeActivity();
+    else setTimeout(tick, 1000);
+  };
+  tick();
+}
 
 (async () => {
   if (!d.client) return fail("off");
