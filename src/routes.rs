@@ -324,11 +324,13 @@ pub async fn not_found(
 pub async fn api_latest(State(state): State<Arc<AppState>>) -> Response {
     let releases = state.github.releases().await;
     let Some(r) = releases.as_deref().and_then(|l| github::latest(l)) else {
-        return (
-            StatusCode::BAD_GATEWAY,
+        let mut res = (
+            StatusCode::SERVICE_UNAVAILABLE,
             Json(serde_json::json!({ "error": "unavailable" })),
         )
             .into_response();
+        res.headers_mut().insert(header::RETRY_AFTER, HeaderValue::from_static("60"));
+        return res;
     };
     let mut res = Json(serde_json::json!({
         "version": r.tag_name,
@@ -345,43 +347,61 @@ pub async fn api_latest(State(state): State<Arc<AppState>>) -> Response {
     res
 }
 
-/// `/download/setup` et `/download/portable` : le fichier de la dernière version est relayé
-/// depuis GitHub, l'utilisateur reste sur le domaine du site.
-pub async fn download(State(state): State<Arc<AppState>>, Path(kind): Path<String>) -> Response {
+/// `/download/setup` et `/download/portable` : le fichier de la dernière version, dans l'ordre
+/// 1. la copie sur le serveur (voir `miroir`) ;
+/// 2. sinon, le fichier relayé depuis GitHub (l'utilisateur reste sur le domaine du site) ;
+/// 3. sinon, une redirection vers GitHub : un téléchargement ne finit jamais sur une erreur.
+pub async fn download(
+    State(state): State<Arc<AppState>>,
+    Path(kind): Path<String>,
+    req: axum::extract::Request,
+) -> Response {
     let Some(kind) = Kind::from_slug(&kind) else {
         return (StatusCode::NOT_FOUND, "Type inconnu").into_response();
     };
+    let page_github = format!("https://github.com/{}/releases/latest", state.github.repo());
     let releases = state.github.releases().await;
-    let Some(release) = releases.as_deref().and_then(|l| github::latest(l)) else {
-        return (StatusCode::BAD_GATEWAY, "Release introuvable").into_response();
+    let Some(asset) = releases
+        .as_deref()
+        .and_then(|l| github::latest(l))
+        .and_then(|r| r.asset(kind))
+        .cloned()
+    else {
+        return redirection(&page_github);
     };
-    let Some(asset) = release.asset(kind) else {
-        return (
-            StatusCode::NOT_FOUND,
-            "Fichier introuvable dans la dernière release",
-        )
-            .into_response();
-    };
-    let upstream = match state
-        .github
-        .http()
-        .get(&asset.browser_download_url)
-        .send()
-        .await
-    {
-        Ok(r) if r.status().is_success() => r,
-        _ => return (StatusCode::BAD_GATEWAY, "Téléchargement impossible").into_response(),
-    };
+    let disposition = format!("attachment; filename=\"{}\"", asset.name.replace('"', ""));
     let content_type = asset
         .content_type
         .clone()
+        .filter(|t| !t.is_empty())
         .unwrap_or_else(|| "application/octet-stream".into());
-    let disposition = format!("attachment; filename=\"{}\"", asset.name.replace('"', ""));
+
+    // 1. copie locale (reprise des téléchargements interrompus gérée par ServeFile)
+    if let Some(chemin) = state.github.miroir.fichier(&asset.name, asset.size) {
+        use tower::ServiceExt;
+        let Ok(res) = tower_http::services::ServeFile::new(chemin).oneshot(req).await;
+        let mut res = res.map(Body::new);
+        for (name, value) in [(header::CONTENT_DISPOSITION, &disposition), (header::CONTENT_TYPE, &content_type)] {
+            if let Ok(v) = HeaderValue::from_str(value) {
+                res.headers_mut().insert(name, v);
+            }
+        }
+        res.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("public, max-age=300"));
+        return res;
+    }
+
+    // 2. relais depuis GitHub
+    let upstream = match state.github.miroir.http().get(&asset.browser_download_url).send().await {
+        Ok(r) if r.status().is_success() => r,
+        // 3. dernier recours : GitHub directement
+        _ => return redirection(&asset.browser_download_url),
+    };
+    let longueur = upstream.content_length().unwrap_or(asset.size);
     let mut res = Response::new(Body::from_stream(upstream.bytes_stream()));
     let h = res.headers_mut();
     for (name, value) in [
         (header::CONTENT_TYPE, content_type),
-        (header::CONTENT_LENGTH, asset.size.to_string()),
+        (header::CONTENT_LENGTH, longueur.to_string()),
         (header::CONTENT_DISPOSITION, disposition),
         (header::CACHE_CONTROL, "public, max-age=300".to_string()),
     ] {
@@ -389,6 +409,15 @@ pub async fn download(State(state): State<Arc<AppState>>, Path(kind): Path<Strin
             h.insert(name, v);
         }
     }
+    res
+}
+
+fn redirection(url: &str) -> Response {
+    let mut res = StatusCode::FOUND.into_response();
+    if let Ok(v) = HeaderValue::from_str(url) {
+        res.headers_mut().insert(header::LOCATION, v);
+    }
+    res.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
     res
 }
 

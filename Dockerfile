@@ -15,5 +15,9 @@ WORKDIR /app
 COPY --from=build /app/target/release/misty-site /usr/local/bin/misty-site
 COPY public public
 ENV PORT=3000
+# Cache des releases, historique du statut et copie des téléchargements :
+# à monter sur un volume persistant (Coolify : Persistent Storage sur /app/data).
+ENV MISTY_CACHE_DIR=/app/data
+RUN mkdir -p /app/data
 EXPOSE 3000
 CMD ["misty-site"]

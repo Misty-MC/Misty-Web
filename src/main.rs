@@ -8,10 +8,12 @@
 //! - `SITE_URL` (`https://misty-launcher.online` par défaut) : adresse publique, pour le référencement
 //! - `SKIN_API` (`https://mc-heads.net` par défaut) : service qui fournit les skins (boutique)
 //! - `GITHUB_API` (`https://api.github.com` par défaut) : utile pour tester avec une fausse API
+//! - `GITHUB_WEB` (`https://github.com` par défaut) : flux Atom et fichiers des releases
 
 mod docs;
 mod format;
 mod github;
+mod miroir;
 mod i18n;
 mod markdown;
 mod routes;
@@ -58,6 +60,7 @@ async fn main() {
     let state = Arc::new(AppState {
         github: Arc::new(github::GitHub::new(
             env_or("GITHUB_API", "https://api.github.com"),
+            env_or("GITHUB_WEB", "https://github.com"),
             env_or("MISTY_REPO", "Misty-MC/Misty"),
             std::env::var("GITHUB_TOKEN").ok().filter(|t| !t.is_empty()),
         )),
