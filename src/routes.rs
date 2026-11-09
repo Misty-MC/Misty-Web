@@ -490,22 +490,12 @@ pub async fn status_json(State(state): State<Arc<AppState>>) -> Response {
     res
 }
 
-// ---------- Vérification Discord (captcha de Misty Bot) ----------
+// ---------- Vérification Discord (captcha puzzle de Misty Bot) ----------
 
 #[derive(Deserialize, Default)]
 pub struct VerifyQuery {
     t: Option<String>,
     lang: Option<String>,
-}
-
-#[derive(Deserialize)]
-pub struct VerifyForm {
-    t: String,
-    id: String,
-    code: String,
-    /// Champ piège : invisible, donc vide pour un humain
-    #[serde(default)]
-    website: String,
 }
 
 /// Langue : celle choisie sur le site (`?lang=`), sinon celle du serveur Discord (dans le lien).
@@ -519,9 +509,7 @@ fn verify_lang(q: &VerifyQuery, claims: Option<&crate::verify::Claims>, headers:
     }
 }
 
-fn verify_response(state: &AppState, lang: Lang, remember: bool, etat: verify_view::Etat) -> Response {
-    let p = page(state, lang, "/verify", None);
-    let mut res = html_response(StatusCode::OK, verify_view::render(&p, etat), lang, remember);
+fn no_store(mut res: Response) -> Response {
     let h = res.headers_mut();
     h.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
     h.insert("x-robots-tag", HeaderValue::from_static("noindex"));
@@ -529,69 +517,99 @@ fn verify_response(state: &AppState, lang: Lang, remember: bool, etat: verify_vi
     res
 }
 
-/// Nouvelle image pour ce lien, ou la page « trop d'essais ».
-fn captcha_or_limit(state: &AppState, lang: Lang, remember: bool, token: &str, erreur: bool) -> Response {
-    match state.verification.nouveau_defi(token) {
-        Some(defi) => verify_response(state, lang, remember, verify_view::Etat::Captcha { token, defi: &defi, erreur }),
-        None => verify_response(state, lang, remember, verify_view::Etat::TropDEssais),
-    }
-}
-
-/// `/verify?t=…` : le captcha.
+/// `/verify?t=…` : consentement, puis le puzzle (tout se joue ensuite en JSON, sans recharger).
 pub async fn verify_page(State(state): State<Arc<AppState>>, Query(q): Query<VerifyQuery>, headers: HeaderMap) -> Response {
     let claims = q.t.as_deref().and_then(|t| state.verification.lien(t));
     let (lang, remember) = verify_lang(&q, claims.as_ref(), &headers);
-    if !state.verification.active() {
-        return verify_response(&state, lang, remember, verify_view::Etat::Indisponible);
-    }
-    match (claims, q.t.as_deref()) {
-        (Some(_), Some(token)) => captcha_or_limit(&state, lang, remember, token, false),
-        _ => verify_response(&state, lang, remember, verify_view::Etat::LienInvalide),
-    }
+    let p = page(&state, lang, "/verify", None);
+    let v = &state.verification;
+    let etat = if !v.active() {
+        verify_view::Etat::Indisponible
+    } else {
+        match (&claims, q.t.as_deref()) {
+            (Some(c), Some(token)) => match v.nouveau_defi(token) {
+                Some((captcha, y)) => verify_view::Etat::Puzzle {
+                    token: token.to_string(),
+                    captcha,
+                    y,
+                    server: v.config(&c.guild.to_string()).and_then(|c| c.name),
+                },
+                None => verify_view::Etat::TropDEssais,
+            },
+            _ => verify_view::Etat::LienInvalide,
+        }
+    };
+    no_store(html_response(StatusCode::OK, verify_view::render(&p, etat), lang, remember))
 }
 
-/// Réponse au captcha : rôle donné si elle est juste.
-pub async fn verify_submit(
-    State(state): State<Arc<AppState>>,
-    Query(q): Query<VerifyQuery>,
-    headers: HeaderMap,
-    axum::extract::Form(f): axum::extract::Form<VerifyForm>,
-) -> Response {
-    let claims = state.verification.lien(&f.t);
-    let (lang, remember) = verify_lang(&q, claims.as_ref(), &headers);
-    if !state.verification.active() {
-        return verify_response(&state, lang, remember, verify_view::Etat::Indisponible);
-    }
-    let Some(claims) = claims else {
-        return verify_response(&state, lang, remember, verify_view::Etat::LienInvalide);
+fn erreur(code: &str) -> Response {
+    no_store(Json(serde_json::json!({ "error": code })).into_response())
+}
+
+#[derive(Deserialize)]
+pub struct VerifyAnswer {
+    t: String,
+    id: String,
+    /// Position finale de la pièce, en pixels de l'image
+    x: f32,
+    /// Geste : (temps en ms, x)
+    #[serde(default)]
+    trace: Vec<(f32, f32)>,
+}
+
+/// Réponse au puzzle : rôle donné si elle est juste, sinon un nouveau puzzle.
+pub async fn verify_answer(State(state): State<Arc<AppState>>, Json(b): Json<VerifyAnswer>) -> Response {
+    let v = &state.verification;
+    let Some(claims) = v.lien(&b.t) else {
+        return erreur("expired");
     };
-    if !f.website.is_empty() {
-        return captcha_or_limit(&state, lang, remember, &f.t, true);
-    }
+    let trace: Vec<(f32, f32)> = b.trace.into_iter().take(400).collect();
     use crate::verify::Reponse;
-    match state.verification.repondre(&f.id, &f.t, &f.code) {
-        Reponse::Juste => match state.verification.donner_role(&claims).await {
-            Ok(()) => verify_response(&state, lang, remember, verify_view::Etat::Reussi),
+    match v.repondre(&b.id, &b.t, b.x, &trace) {
+        Reponse::Juste => match v.donner_role(&claims).await {
+            Ok(()) => no_store(Json(serde_json::json!({ "ok": true })).into_response()),
             Err(e) => {
                 eprintln!("Vérification : rôle non donné (serveur {}) : {e}", claims.guild);
-                verify_response(&state, lang, remember, verify_view::Etat::EchecRole)
+                erreur("role")
             }
         },
-        Reponse::Faux | Reponse::Perime => captcha_or_limit(&state, lang, remember, &f.t, true),
+        Reponse::Faux | Reponse::Perime => match v.nouveau_defi(&b.t) {
+            Some((captcha, y)) => no_store(Json(serde_json::json!({ "ok": false, "captcha": captcha, "y": y })).into_response()),
+            None => erreur("many"),
+        },
     }
 }
 
-/// `/verify/captcha/<id>.svg` : l'image d'un captcha.
-pub async fn verify_captcha(State(state): State<Arc<AppState>>, Path(file): Path<String>) -> Response {
-    let id = file.trim_end_matches(".svg");
-    match state.verification.image(id) {
-        Some(svg) => {
-            let mut res = svg.into_response();
-            let h = res.headers_mut();
-            h.insert(header::CONTENT_TYPE, HeaderValue::from_static("image/svg+xml"));
-            h.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
-            h.insert("x-robots-tag", HeaderValue::from_static("noindex"));
-            res
+#[derive(Deserialize)]
+pub struct VerifyNew {
+    t: String,
+}
+
+/// « Autre défi » : un nouveau puzzle pour le même lien.
+pub async fn verify_new(State(state): State<Arc<AppState>>, Json(b): Json<VerifyNew>) -> Response {
+    if state.verification.lien(&b.t).is_none() {
+        return erreur("expired");
+    }
+    match state.verification.nouveau_defi(&b.t) {
+        Some((captcha, y)) => no_store(Json(serde_json::json!({ "captcha": captcha, "y": y })).into_response()),
+        None => erreur("many"),
+    }
+}
+
+/// `/verify/captcha/<id>/bg.png` (fond avec le trou) et `/verify/captcha/<id>/piece.png`.
+pub async fn verify_image(State(state): State<Arc<AppState>>, Path((id, file)): Path<(String, String)>) -> Response {
+    let piece = match file.as_str() {
+        "bg.png" => false,
+        "piece.png" => true,
+        _ => return StatusCode::NOT_FOUND.into_response(),
+    };
+    let st = state.clone();
+    let png = tokio::task::spawn_blocking(move || st.verification.image(&id, piece)).await.ok().flatten();
+    match png {
+        Some(png) => {
+            let mut res = png.into_response();
+            res.headers_mut().insert(header::CONTENT_TYPE, HeaderValue::from_static("image/png"));
+            no_store(res)
         }
         None => StatusCode::NOT_FOUND.into_response(),
     }
@@ -607,20 +625,18 @@ pub struct ActivityQuery {
 
 /// `/activity` : la page ouverte dans Discord.
 pub async fn activity_page(State(state): State<Arc<AppState>>, Query(q): Query<ActivityQuery>, headers: HeaderMap) -> Response {
+    let config = q.guild_id.as_deref().and_then(|g| state.verification.config(g));
     // langue du serveur Discord (envoyée par le bot), sinon celle du navigateur
     let lang = q
         .lang
         .as_deref()
         .and_then(Lang::from_code)
-        .or_else(|| q.guild_id.as_deref().and_then(|g| state.verification.config(g)).and_then(|c| Lang::from_code(&c.lang)))
+        .or_else(|| config.as_ref().and_then(|c| Lang::from_code(&c.lang)))
         .unwrap_or_else(|| i18n::negotiate(None, &headers).0);
     let p = page(&state, lang, "/activity", None);
     let client = state.verification.activite_active().then(|| state.verification.client_id()).flatten();
-    let mut res = html_response(StatusCode::OK, verify_view::activite(&p, client), lang, false);
-    let h = res.headers_mut();
-    h.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
-    h.insert("x-robots-tag", HeaderValue::from_static("noindex"));
-    res
+    let server = config.and_then(|c| c.name);
+    no_store(html_response(StatusCode::OK, verify_view::activite(&p, client, server.as_deref()), lang, false))
 }
 
 #[derive(Deserialize)]
@@ -629,11 +645,7 @@ pub struct ActivityStart {
     guild_id: Option<String>,
 }
 
-fn erreur(code: &str) -> Response {
-    Json(serde_json::json!({ "error": code })).into_response()
-}
-
-/// Début : qui est le membre (code OAuth2), lien signé pour son serveur, première image.
+/// Début : qui est le membre (code OAuth2), lien signé pour son serveur, premier puzzle.
 pub async fn activity_start(State(state): State<Arc<AppState>>, Json(b): Json<ActivityStart>) -> Response {
     let v = &state.verification;
     if !v.activite_active() {
@@ -653,51 +665,8 @@ pub async fn activity_start(State(state): State<Arc<AppState>>, Json(b): Json<Ac
         return erreur("guild");
     };
     match v.nouveau_defi(&token) {
-        Some(captcha) => Json(serde_json::json!({ "token": token, "captcha": captcha })).into_response(),
+        Some((captcha, y)) => no_store(Json(serde_json::json!({ "token": token, "captcha": captcha, "y": y })).into_response()),
         None => erreur("many"),
-    }
-}
-
-#[derive(Deserialize)]
-pub struct ActivityNew {
-    t: String,
-}
-
-pub async fn activity_new(State(state): State<Arc<AppState>>, Json(b): Json<ActivityNew>) -> Response {
-    if state.verification.lien(&b.t).is_none() {
-        return erreur("expired");
-    }
-    match state.verification.nouveau_defi(&b.t) {
-        Some(captcha) => Json(serde_json::json!({ "captcha": captcha })).into_response(),
-        None => erreur("many"),
-    }
-}
-
-#[derive(Deserialize)]
-pub struct ActivityAnswer {
-    t: String,
-    id: String,
-    code: String,
-}
-
-pub async fn activity_answer(State(state): State<Arc<AppState>>, Json(b): Json<ActivityAnswer>) -> Response {
-    let v = &state.verification;
-    let Some(claims) = v.lien(&b.t) else {
-        return erreur("expired");
-    };
-    use crate::verify::Reponse;
-    match v.repondre(&b.id, &b.t, &b.code) {
-        Reponse::Juste => match v.donner_role(&claims).await {
-            Ok(()) => Json(serde_json::json!({ "ok": true })).into_response(),
-            Err(e) => {
-                eprintln!("Activité : rôle non donné (serveur {}) : {e}", claims.guild);
-                erreur("role")
-            }
-        },
-        Reponse::Faux | Reponse::Perime => match v.nouveau_defi(&b.t) {
-            Some(captcha) => Json(serde_json::json!({ "ok": false, "captcha": captcha })).into_response(),
-            None => erreur("many"),
-        },
     }
 }
 
