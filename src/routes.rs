@@ -8,6 +8,7 @@ use crate::skins;
 use crate::views::docs as docs_view;
 use crate::views::shop::{self, ShopView};
 use crate::views::status as status_view;
+use crate::views::verify as verify_view;
 use crate::views::{home, layout::Page, not_found, patch_notes};
 use axum::body::Body;
 use axum::extract::{Path, Query, State};
@@ -478,4 +479,111 @@ pub async fn status_json(State(state): State<Arc<AppState>>) -> Response {
     .into_response();
     res.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
     res
+}
+
+// ---------- Vérification Discord (captcha de Misty Bot) ----------
+
+#[derive(Deserialize, Default)]
+pub struct VerifyQuery {
+    t: Option<String>,
+    lang: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct VerifyForm {
+    t: String,
+    id: String,
+    code: String,
+    /// Champ piège : invisible, donc vide pour un humain
+    #[serde(default)]
+    website: String,
+}
+
+/// Langue : celle choisie sur le site (`?lang=`), sinon celle du serveur Discord (dans le lien).
+fn verify_lang(q: &VerifyQuery, claims: Option<&crate::verify::Claims>, headers: &HeaderMap) -> (Lang, bool) {
+    if q.lang.is_some() {
+        return i18n::negotiate(q.lang.as_deref(), headers);
+    }
+    match claims.and_then(|c| Lang::from_code(&c.lang)) {
+        Some(l) => (l, false),
+        None => i18n::negotiate(None, headers),
+    }
+}
+
+fn verify_response(state: &AppState, lang: Lang, remember: bool, etat: verify_view::Etat) -> Response {
+    let p = page(state, lang, "/verify", None);
+    let mut res = html_response(StatusCode::OK, verify_view::render(&p, etat), lang, remember);
+    let h = res.headers_mut();
+    h.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    h.insert("x-robots-tag", HeaderValue::from_static("noindex"));
+    h.insert(header::REFERRER_POLICY, HeaderValue::from_static("no-referrer"));
+    res
+}
+
+/// Nouvelle image pour ce lien, ou la page « trop d'essais ».
+fn captcha_or_limit(state: &AppState, lang: Lang, remember: bool, token: &str, erreur: bool) -> Response {
+    match state.verification.nouveau_defi(token) {
+        Some(defi) => verify_response(state, lang, remember, verify_view::Etat::Captcha { token, defi: &defi, erreur }),
+        None => verify_response(state, lang, remember, verify_view::Etat::TropDEssais),
+    }
+}
+
+/// `/verify?t=…` : le captcha.
+pub async fn verify_page(State(state): State<Arc<AppState>>, Query(q): Query<VerifyQuery>, headers: HeaderMap) -> Response {
+    let claims = q.t.as_deref().and_then(|t| state.verification.lien(t));
+    let (lang, remember) = verify_lang(&q, claims.as_ref(), &headers);
+    if !state.verification.active() {
+        return verify_response(&state, lang, remember, verify_view::Etat::Indisponible);
+    }
+    match (claims, q.t.as_deref()) {
+        (Some(_), Some(token)) => captcha_or_limit(&state, lang, remember, token, false),
+        _ => verify_response(&state, lang, remember, verify_view::Etat::LienInvalide),
+    }
+}
+
+/// Réponse au captcha : rôle donné si elle est juste.
+pub async fn verify_submit(
+    State(state): State<Arc<AppState>>,
+    Query(q): Query<VerifyQuery>,
+    headers: HeaderMap,
+    axum::extract::Form(f): axum::extract::Form<VerifyForm>,
+) -> Response {
+    let claims = state.verification.lien(&f.t);
+    let (lang, remember) = verify_lang(&q, claims.as_ref(), &headers);
+    if !state.verification.active() {
+        return verify_response(&state, lang, remember, verify_view::Etat::Indisponible);
+    }
+    let Some(claims) = claims else {
+        return verify_response(&state, lang, remember, verify_view::Etat::LienInvalide);
+    };
+    if !f.website.is_empty() {
+        return captcha_or_limit(&state, lang, remember, &f.t, true);
+    }
+    use crate::verify::Reponse;
+    match state.verification.repondre(&f.id, &f.t, &f.code) {
+        Reponse::Juste => match state.verification.donner_role(&claims).await {
+            Ok(()) => verify_response(&state, lang, remember, verify_view::Etat::Reussi),
+            Err(e) => {
+                eprintln!("Vérification : rôle non donné (serveur {}) : {e}", claims.guild);
+                verify_response(&state, lang, remember, verify_view::Etat::EchecRole)
+            }
+        },
+        Reponse::Faux | Reponse::Perime => captcha_or_limit(&state, lang, remember, &f.t, true),
+    }
+}
+
+/// `/verify/captcha/<id>.svg` : l'image d'un captcha.
+pub async fn verify_captcha(State(state): State<Arc<AppState>>, Path(file): Path<String>) -> Response {
+    let id = file.trim_end_matches(".svg");
+    match state.verification.image(id) {
+        Some(svg) => {
+            let mut res = svg.into_response();
+            let h = res.headers_mut();
+            h.insert(header::CONTENT_TYPE, HeaderValue::from_static("image/svg+xml"));
+            h.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+            h.insert("x-robots-tag", HeaderValue::from_static("noindex"));
+            res
+        }
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
 }
