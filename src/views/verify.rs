@@ -90,7 +90,7 @@ pub fn activite(p: &Page, client_id: Option<&str>) -> Markup {
                 div #vf-app.vf-card
                     data-client=[client_id]
                     data-wrong=(tr.vf_wrong) data-off=(tr.vf_off_p) data-many=(tr.vf_many_p)
-                    data-role=(tr.vf_role_p) data-auth=(tr.vf_auth_p) data-bad=(tr.vf_bad_p)
+                    data-role=(tr.vf_role_p) data-auth=(tr.vf_auth_p) data-auth-title=(tr.vf_auth_t) data-bad=(tr.vf_bad_p)
                     data-bad-title=(tr.vf_bad_title) data-off-title=(tr.vf_off_title) data-role-title=(tr.vf_role_title)
                 {
                     p.vf-wait #vf-wait { span.vf-spin {} (tr.vf_loading) }
@@ -111,6 +111,7 @@ pub fn activite(p: &Page, client_id: Option<&str>) -> Markup {
                         span.vf-badge #vf-badge {}
                         h2 #vf-title {}
                         p #vf-text {}
+                        code.vf-detail #vf-detail hidden {}
                         button.btn.ghost #vf-close type="button" { (tr.vf_close) }
                     }
                     div hidden #vf-ok data-title=(tr.vf_ok_title) data-text=(tr.vf_ok_p) {}
