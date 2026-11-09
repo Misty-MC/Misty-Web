@@ -5,6 +5,8 @@ COPY Cargo.toml Cargo.lock ./
 COPY src src
 COPY locales locales
 COPY docs docs
+# logo intégré au captcha puzzle (include_bytes!)
+COPY public/assets/icone.png public/assets/icone.png
 RUN cargo build --release --locked
 
 FROM debian:bookworm-slim
