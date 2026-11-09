@@ -28,6 +28,7 @@ use axum::http::{HeaderValue, header};
 use axum::routing::get;
 use std::sync::Arc;
 use tower_http::compression::CompressionLayer;
+use tower_http::compression::predicate::{NotForContentType, Predicate};
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 
@@ -107,7 +108,15 @@ async fn main() {
         .route("/api/latest", get(routes::api_latest))
         .route("/download/{kind}", get(routes::download))
         .fallback_service(static_files)
-        .layer(CompressionLayer::new())
+        // les téléchargements (zip, exe) sont déjà compressés : sans recompression, leur taille
+        // reste annoncée (barre de progression du navigateur et de la mise à jour du launcher)
+        .layer(CompressionLayer::new().compress_when(
+            tower_http::compression::DefaultPredicate::new()
+                .and(NotForContentType::const_new("application/zip"))
+                .and(NotForContentType::const_new("application/octet-stream"))
+                .and(NotForContentType::const_new("application/vnd.microsoft.portable-executable"))
+                .and(NotForContentType::const_new("application/x-msdownload")),
+        ))
         .with_state(state);
 
     let port = env_or("PORT", "3000");
