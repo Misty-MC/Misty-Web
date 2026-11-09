@@ -123,6 +123,9 @@ pub struct ConfigServeur {
     #[serde(default)]
     pub remove: Option<String>,
     pub log: Option<String>,
+    /// Salon du règlement : la vérification ne se fait que là
+    #[serde(default)]
+    pub channel: Option<String>,
     pub lang: String,
     /// Nom du serveur Discord (affiché sur la page)
     #[serde(default)]
@@ -334,6 +337,28 @@ impl Verification {
         } else {
             Reponse::Faux
         }
+    }
+
+    /// Le membre a-t-il déjà ce rôle ? (`None` si Discord ne répond pas)
+    pub async fn a_le_role(&self, guild: u64, user: u64, role: u64) -> Option<bool> {
+        let token = self.bot_token.as_deref()?;
+        #[derive(Deserialize)]
+        struct Membre {
+            roles: Vec<String>,
+        }
+        let m: Membre = self
+            .http
+            .get(format!("{}/guilds/{guild}/members/{user}", self.api))
+            .header("Authorization", format!("Bot {token}"))
+            .send()
+            .await
+            .ok()?
+            .error_for_status()
+            .ok()?
+            .json()
+            .await
+            .ok()?;
+        Some(m.roles.iter().any(|r| *r == role.to_string()))
     }
 
     /// Donne le rôle au membre, puis note la vérification dans le salon de logs.

@@ -36,7 +36,7 @@ function report(stage, err) {
       scope: ["identify"],
     });
     stage = "start";
-    const r = await post("/activity/start", { code, guild_id: sdk.guildId });
+    const r = await post("/activity/start", { code, guild_id: sdk.guildId, channel_id: sdk.channelId });
     if (r.token && r.captcha) cp.ready(r.token, r.captcha, r.y);
     else cp.fail(r.error, r.error === "auth" ? "start: token" : "");
   } catch (err) {
