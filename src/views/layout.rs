@@ -5,6 +5,9 @@ use crate::i18n::{Lang, Tr};
 use maud::{DOCTYPE, Markup, PreEscaped, html};
 use std::sync::LazyLock;
 
+/// Serveur Discord de Misty.
+pub const DISCORD_URL: &str = "https://discord.gg/rdQJUgvUh3";
+
 /// Ajouté aux adresses des CSS et du JS (`?v=`) : change à chaque démarrage du serveur,
 /// donc à chaque déploiement, pour que les navigateurs ne gardent pas d'anciennes versions en cache.
 static ASSET_VERSION: LazyLock<String> = LazyLock::new(|| {
@@ -143,6 +146,7 @@ fn nav(p: &Page) -> Markup {
                     }
                 }
                 div.nav-right {
+                    a.gh.dc href=(DISCORD_URL) target="_blank" rel="noopener" aria-label="Discord" title="Discord" { (icons::discord()) }
                     a.gh href=(p.github_url()) target="_blank" rel="noopener" aria-label="GitHub" { (icons::github()) span { "GitHub" } }
                     (lang_menu(p))
                     a.btn.play.sm href="/#download" { (icons::download()) span { (tr.nav_download) } }
@@ -174,6 +178,7 @@ fn mobile_menu(p: &Page) -> Markup {
                     @if let Some(n) = p.release_count { span.count { (n) } }
                 }
                 a href="/status" aria-current=[here("/status")] { (tr.nav_status) }
+                a href=(DISCORD_URL) target="_blank" rel="noopener" { "Discord" (icons::external()) }
                 a href=(p.github_url()) target="_blank" rel="noopener" { "GitHub" (icons::external()) }
             }
         }
@@ -240,11 +245,17 @@ fn footer(p: &Page) -> Markup {
                     div.about {
                         h2 { (tr.ft_about_t) }
                         p { (tr.ft_about_p) }
+                        a.discord-cta href=(DISCORD_URL) target="_blank" rel="noopener" {
+                            (icons::discord())
+                            span { strong { (tr.discord_join) } small { (tr.discord_sub) } }
+                            (icons::external())
+                        }
                     }
                 }
                 div.fbottom {
                     span.made { (icons::rust()) (tr.ft_made) }
                     span.fb-right {
+                        a href=(DISCORD_URL) target="_blank" rel="noopener" { (icons::discord()) "Discord" }
                         a href=(p.github_url()) target="_blank" rel="noopener" { (icons::github()) (p.repo) }
                         a.totop href="#top" { (tr.ft_top) (icons::arrow_up()) }
                     }

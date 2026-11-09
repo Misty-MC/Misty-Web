@@ -19,6 +19,26 @@
   // Un seul menu ouvert à la fois
   menus.forEach(m => m.addEventListener("toggle", () => { if (m.open) menus.forEach(o => { if (o !== m) o.open = false; }); }));
 
+  // Page de statut : heures locales dans les bulles, et mise à jour toutes les minutes sans recharger
+  if (document.body.classList.contains("status-page")) {
+    const local = root => root.querySelectorAll(".st-bars i[data-t]").forEach(i => {
+      const t = new Date(+i.dataset.t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      i.title = i.title.replace(/^\d\d:\d\d UTC/, t);
+    });
+    local(document);
+    setInterval(async () => {
+      if (document.hidden) return;
+      const html = await fetch(location.href, { cache: "no-store" }).then(r => r.ok ? r.text() : null).catch(() => null);
+      if (!html) return;
+      const next = new DOMParser().parseFromString(html, "text/html");
+      for (const sel of [".st-summary", "section.status"]) {
+        const a = document.querySelector(sel), b = next.querySelector(sel);
+        if (a && b) a.replaceWith(b);
+      }
+      local(document);
+    }, 60_000);
+  }
+
   // Patch notes : ouvrir la version visée par l'ancre (ex. /patch-notes#v0.3.1)
   const openFromHash = () => {
     const id = decodeURIComponent(location.hash.slice(1));
@@ -74,7 +94,7 @@
     };
 
     // Animations : repos, marche, course, vol, salut, accroupi
-    const ANIMS = { idle: sv.IdleAnimation, walk: sv.WalkingAnimation, run: sv.RunningAnimation, fly: sv.FlyingAnimation, wave: sv.WaveAnimation, crouch: sv.CrouchAnimation };
+    const ANIMS = { idle: sv.IdleAnimation, walk: sv.WalkingAnimation, run: sv.RunningAnimation, fly: sv.FlyingAnimation, crouch: sv.CrouchAnimation };
     const SPEED = { walk: 0.6, run: 0.8 };
     const animButtons = [...stage.querySelectorAll("[data-anim]")];
     const setAnim = key => {

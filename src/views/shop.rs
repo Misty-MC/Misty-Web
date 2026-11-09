@@ -146,7 +146,6 @@ fn stage(p: &Page, skin: &str, name: Option<&str>, studio: bool) -> Markup {
         ("walk", &tr.shop_anim_walk),
         ("run", &tr.shop_anim_run),
         ("fly", &tr.shop_anim_fly),
-        ("wave", &tr.shop_anim_wave),
         ("crouch", &tr.shop_anim_crouch),
     ];
     html! {
