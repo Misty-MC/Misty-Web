@@ -2,7 +2,6 @@
 //! Chaque clé est obligatoire : une clé manquante fait échouer `cargo test` (et le démarrage).
 
 use axum::http::{HeaderMap, header};
-use serde::Deserialize;
 use std::sync::LazyLock;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -42,9 +41,61 @@ impl Lang {
     }
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-pub struct Tr {
+/// Déclare `Tr` (un champ par clé des fichiers `locales/*.toml`) et sa lecture.
+///
+/// Pas de `#[derive(Deserialize)]` : avec plus de 300 champs, serde générait une fonction géante
+/// (et en trois exemplaires) que LLVM mettait plus de dix minutes à optimiser en release. Ici, la
+/// lecture est une suite d'affectations simples, avec les mêmes garanties : une clé manquante,
+/// inconnue ou du mauvais type fait échouer le démarrage et `cargo test`.
+macro_rules! traductions {
+    ($($(#[$m:meta])* pub $champ:ident : $t:ty,)*) => {
+        #[derive(Default)]
+        pub struct Tr {
+            $($(#[$m])* pub $champ: $t,)*
+        }
+
+        impl Tr {
+            fn depuis(mut table: toml::Table, code: &str) -> Tr {
+                let mut tr = Tr::default();
+                $( tr.$champ = Lire::lire(table.remove(stringify!($champ)), code, stringify!($champ)); )*
+                if let Some(cle) = table.keys().next() {
+                    panic!("locales/{code}.toml : clé inconnue `{cle}`");
+                }
+                tr
+            }
+        }
+    };
+}
+
+/// Lecture d'une valeur de traduction (texte, ou liste de 12 mois).
+trait Lire: Sized {
+    fn lire(valeur: Option<toml::Value>, code: &str, cle: &str) -> Self;
+}
+
+impl Lire for String {
+    #[inline(never)]
+    fn lire(valeur: Option<toml::Value>, code: &str, cle: &str) -> Self {
+        match valeur {
+            Some(toml::Value::String(s)) => s,
+            Some(_) => panic!("locales/{code}.toml : `{cle}` doit être un texte"),
+            None => panic!("locales/{code}.toml : clé `{cle}` manquante"),
+        }
+    }
+}
+
+impl Lire for [String; 12] {
+    #[inline(never)]
+    fn lire(valeur: Option<toml::Value>, code: &str, cle: &str) -> Self {
+        let textes: Vec<String> = match valeur {
+            Some(toml::Value::Array(a)) => a.into_iter().filter_map(|v| v.as_str().map(str::to_string)).collect(),
+            None => panic!("locales/{code}.toml : clé `{cle}` manquante"),
+            Some(_) => Vec::new(),
+        };
+        textes.try_into().unwrap_or_else(|_| panic!("locales/{code}.toml : `{cle}` doit contenir 12 textes"))
+    }
+}
+
+traductions! {
     pub code: String,
     pub lang_name: String,
     pub title: String,
@@ -385,8 +436,9 @@ pub struct Tr {
 }
 
 fn parse(code: &str, src: &str) -> Tr {
-    let tr: Tr =
+    let table: toml::Table =
         toml::from_str(src).unwrap_or_else(|e| panic!("locales/{code}.toml invalide : {e}"));
+    let tr = Tr::depuis(table, code);
     assert_eq!(tr.code, code, "locales/{code}.toml : `code` incorrect");
     tr
 }
@@ -439,6 +491,20 @@ pub fn negotiate(query: Option<&str>, headers: &HeaderMap) -> (Lang, bool) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Une clé manquante, en trop ou du mauvais type est refusée (comme avec serde avant).
+    #[test]
+    fn locale_incomplete_refusee() {
+        let fr = include_str!("../locales/fr.toml");
+        let sans_titre: String = fr.lines().filter(|l| !l.starts_with("title =")).collect::<Vec<_>>().join("\n");
+        let en_trop = format!("{fr}\nzz_inconnue = \"x\"\n");
+        let mauvais_type = fr.replace("title = ", "title = 3 #");
+        for (cas, attendu) in [(sans_titre, "clé `title` manquante"), (en_trop, "clé inconnue `zz_inconnue`"), (mauvais_type, "`title` doit être un texte")] {
+            let erreur = std::panic::catch_unwind(|| parse("fr", &cas)).err().expect(attendu);
+            let message = erreur.downcast_ref::<String>().cloned().unwrap_or_default();
+            assert!(message.contains(attendu), "{message}");
+        }
+    }
 
     #[test]
     fn all_locales_load() {

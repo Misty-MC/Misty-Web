@@ -18,7 +18,7 @@ pub struct Miroir {
 
 impl Miroir {
     pub fn new(dossier: PathBuf) -> Self {
-        let http = reqwest::Client::builder()
+        let http = crate::http()
             .user_agent("misty-site")
             .connect_timeout(Duration::from_secs(10))
             .read_timeout(Duration::from_secs(30))

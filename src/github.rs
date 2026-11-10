@@ -129,7 +129,7 @@ enum Reponse {
 
 impl GitHub {
     pub fn new(api_base: String, web_base: String, repo: String, token: Option<String>) -> Self {
-        let http = reqwest::Client::builder()
+        let http = crate::http()
             .user_agent(USER_AGENT)
             .connect_timeout(Duration::from_secs(5))
             .timeout(DELAI_REQUETE)

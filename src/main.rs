@@ -73,6 +73,28 @@ pub struct AppState {
     pub verification: Arc<verify::Verification>,
 }
 
+/// Durée de cache des fichiers statiques. Une adresse avec `?v=` (CSS, JS, WebAssembly : voir
+/// `views::layout::ASSET_VERSION`) change à chaque déploiement, son contenu ne change donc jamais :
+/// le navigateur peut la garder un an sans redemander. Les autres gardent une heure.
+async fn cache_statique(req: axum::extract::Request, next: axum::middleware::Next) -> axum::response::Response {
+    let versionnee = req.uri().query().is_some_and(|q| q.starts_with("v=") || q.contains("&v="));
+    let mut res = next.run(req).await;
+    if versionnee && res.status().is_success() {
+        res.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("public, max-age=31536000, immutable"));
+    }
+    res
+}
+
+/// Client HTTP (GitHub, Mojang, Discord…), avec rustls et ring comme fournisseur de chiffrement
+/// (installé une fois ; aws-lc, le fournisseur par défaut, est long à compiler).
+pub fn http() -> reqwest::ClientBuilder {
+    static TLS: std::sync::Once = std::sync::Once::new();
+    TLS.call_once(|| {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+    });
+    reqwest::Client::builder()
+}
+
 fn env_or(key: &str, default: &str) -> String {
     std::env::var(key)
         .ok()
@@ -117,9 +139,14 @@ async fn main() {
     tokio::spawn(state.telemetrie.clone().menage_en_boucle());
     tokio::spawn(state.discord.clone().resume_en_boucle(state.telemetrie.dossier()));
 
+    // Fichiers statiques. Les versions .br et .gz préparées par le Dockerfile sont servies telles
+    // quelles quand le navigateur les accepte : rien n'est compressé à chaque requête.
     let static_files = ServeDir::new(env_or("MISTY_PUBLIC_DIR", "public"))
+        .precompressed_br()
+        .precompressed_gzip()
         .not_found_service(get(routes::not_found).with_state(state.clone()));
     let static_files = tower::ServiceBuilder::new()
+        .layer(axum::middleware::from_fn(cache_statique))
         .layer(SetResponseHeaderLayer::if_not_present(
             header::CACHE_CONTROL,
             HeaderValue::from_static("public, max-age=3600"),
