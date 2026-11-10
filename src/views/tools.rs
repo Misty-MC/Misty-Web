@@ -77,7 +77,10 @@ pub fn seed(p: &Page) -> Markup {
         "scales": seedmap::ECHELLES,
         "tile": seedmap::TUILE,
         "region": seedmap::REGION,
-        "structures": seedmap::STRUCTURES.iter().map(|(cle, dim, _)| json!([cle, dim])).collect::<Vec<_>>(),
+        "structures": seedmap::STRUCTURES.iter().map(|(cle, dim, types)| json!([cle, dim, types])).collect::<Vec<_>>(),
+        // calcul dans le navigateur : Web Workers + cubiomes en WebAssembly
+        "worker": format!("/js/seed-worker.js?v={}", layout::ASSET_VERSION.as_str()),
+        "wasm": format!("/wasm/cubiomes.wasm?v={}", layout::ASSET_VERSION.as_str()),
         "labels": structures.iter().map(|(c, l)| (c.to_string(), json!(l))).collect::<serde_json::Map<_, _>>(),
         "text": {
             "copied": tr.seed_copied,
