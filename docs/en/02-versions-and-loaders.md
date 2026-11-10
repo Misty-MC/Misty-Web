@@ -23,13 +23,14 @@ A mod loader is what lets Minecraft load mods. When you pick a version, Misty as
 | Forge | 1.7.10 and later | The historical loader, a huge mod library. |
 | NeoForge | 1.20.1 and later | Fork of Forge for recent versions. |
 | Fabric | 1.14 and later | Light and quick to update. |
+| Quilt | 1.14 and later | Fork of Fabric, also loads most Fabric mods. |
 | OptiFine | 1.7.2 and later | Performance and shaders. Does not install other mods. |
 | LiteLoader | 1.5.2 to 1.12.2 | For older versions. |
 
 These ranges are a first filter: a loader may still be missing for a given version if it was never released for it.
 
 > [!NOTE]
-> Mods can only be installed on a profile with a mod loader (Forge, NeoForge, Fabric or LiteLoader). Vanilla and OptiFine profiles accept resource packs, datapacks and, for OptiFine, shaders.
+> Mods can only be installed on a profile with a mod loader (Forge, NeoForge, Fabric, Quilt or LiteLoader). Vanilla and OptiFine profiles accept resource packs, datapacks and, for OptiFine, shaders.
 
 ## Shaders
 

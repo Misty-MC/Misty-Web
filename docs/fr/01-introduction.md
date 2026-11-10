@@ -9,7 +9,7 @@ Misty est un launcher gratuit pour **Minecraft : Java Edition** sur Windows. Il 
 ## En une minute
 
 - **Toutes les versions.** Les releases et, sur demande, les snapshots, bêtas, alphas et versions Indev.
-- **Des mod loaders en un clic.** Forge, NeoForge, Fabric, OptiFine et LiteLoader, proposés seulement s'ils existent pour la version choisie. Voir [Versions et mod loaders](/docs/versions-and-loaders).
+- **Des mod loaders en un clic.** Forge, NeoForge, Fabric, Quilt, OptiFine et LiteLoader, proposés seulement s'ils existent pour la version choisie. Voir [Versions et mod loaders](/docs/versions-and-loaders).
 - **Des profils.** Chaque profil a sa version, son mod loader et son dossier de jeu, tandis que les gros fichiers restent partagés. Voir [Profils](/docs/profiles).
 - **Des mods Modrinth et CurseForge.** Recherche, installation avec les dépendances, activation et désactivation. Voir [Mods, packs et shaders](/docs/mods-and-content).
 - **Des modpacks.** Les modpacks Modrinth (`.mrpack`) et CurseForge deviennent un profil prêt à jouer. Voir [Modpacks](/docs/modpacks).

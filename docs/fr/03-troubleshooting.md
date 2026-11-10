@@ -10,7 +10,7 @@ section = "help"
 
 ## Un mod loader n'apparaît pas
 
-Misty ne propose que les loaders qui existent pour la version choisie. NeoForge commence à la 1.20.1, Fabric à la 1.14, et LiteLoader s'arrête à la 1.12.2. Voir [Versions et mod loaders](/docs/versions-and-loaders).
+Misty ne propose que les loaders qui existent pour la version choisie. NeoForge commence à la 1.20.1, Fabric et Quilt à la 1.14, et LiteLoader s'arrête à la 1.12.2. Voir [Versions et mod loaders](/docs/versions-and-loaders).
 
 ## Un mod refuse de s'installer
 
