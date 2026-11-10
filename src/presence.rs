@@ -86,7 +86,7 @@ impl Presence {
 }
 
 /// Adresse du client (derrière Cloudflare et le proxy), seulement pour limiter le débit.
-fn adresse(entetes: &HeaderMap) -> String {
+pub(crate) fn adresse(entetes: &HeaderMap) -> String {
     for nom in ["cf-connecting-ip", "x-forwarded-for", "x-real-ip"] {
         if let Some(v) = entetes.get(nom).and_then(|v| v.to_str().ok()) {
             if let Some(premiere) = v.split(',').next().map(str::trim).filter(|s| !s.is_empty()) {
