@@ -98,7 +98,7 @@ The captcha and its state stay in memory for 10 minutes at most. For each server
 
 ## Sharing
 
-We do not sell or rent any data. It only goes through the services needed to run Misty: the host, Cloudflare, Mojang (account verification and skins), mc-heads.net (skins, as a fallback), GitHub (launcher files) and Discord (verification, the team's private channel). Some of these services are located in the United States.
+We do not sell or rent any data. It only goes through the services needed to run Misty: the host (netcup, in Germany), Cloudflare, Mojang (account verification and skins), mc-heads.net (skins, as a fallback), GitHub (launcher files) and Discord (verification, the team's private channel). Some of these services are located in the United States.
 
 ## Your rights
 

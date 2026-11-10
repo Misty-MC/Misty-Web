@@ -98,7 +98,7 @@ Le captcha et son état restent en mémoire 10 minutes au plus. Le site garde se
 
 ## Partage des données
 
-Nous ne vendons ni ne louons aucune donnée. Elles ne passent que par les services nécessaires au fonctionnement : l'hébergeur, Cloudflare, Mojang (vérification des comptes et skins), mc-heads.net (skins, en secours), GitHub (fichiers du launcher) et Discord (vérification, salon privé de l'équipe). Certains de ces services sont situés aux États-Unis.
+Nous ne vendons ni ne louons aucune donnée. Elles ne passent que par les services nécessaires au fonctionnement : l'hébergeur (netcup, en Allemagne), Cloudflare, Mojang (vérification des comptes et skins), mc-heads.net (skins, en secours), GitHub (fichiers du launcher) et Discord (vérification, salon privé de l'équipe). Certains de ces services sont situés aux États-Unis.
 
 ## Vos droits
 

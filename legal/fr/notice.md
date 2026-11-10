@@ -15,9 +15,7 @@ Le site **misty-launcher.online** et le launcher Misty sont édités par l'équi
 
 ## Hébergement
 
-Le site est hébergé par :
-
-- **Hébergeur** : *à compléter (nom, adresse et téléphone de l'hébergeur)*
+Le site est hébergé par **netcup GmbH**, Daimlerstraße 25, 76185 Karlsruhe, Allemagne. Téléphone : +49 721 7540755-0.
 
 Le trafic passe par **Cloudflare, Inc.** (101 Townsend St, San Francisco, CA 94107, États-Unis), qui protège le site contre les attaques et accélère son affichage.
 

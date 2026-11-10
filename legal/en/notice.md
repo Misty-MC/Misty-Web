@@ -15,9 +15,7 @@ The **misty-launcher.online** website and the Misty launcher are published by th
 
 ## Hosting
 
-The website is hosted by:
-
-- **Host**: *to be completed (name, address and phone number of the host)*
+The website is hosted by **netcup GmbH**, Daimlerstraße 25, 76185 Karlsruhe, Germany. Phone: +49 721 7540755-0.
 
 Traffic goes through **Cloudflare, Inc.** (101 Townsend St, San Francisco, CA 94107, USA), which protects the site against attacks and speeds it up.
 
