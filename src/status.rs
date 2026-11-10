@@ -220,7 +220,7 @@ impl Status {
     }
 
     fn avec_fichier(fichier: PathBuf) -> Self {
-        let http = reqwest::Client::builder()
+        let http = crate::http()
             .user_agent("misty-site-status (https://misty-launcher.online/status)")
             .connect_timeout(Duration::from_secs(4))
             .timeout(DELAI)

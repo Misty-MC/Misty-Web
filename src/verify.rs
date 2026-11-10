@@ -164,7 +164,7 @@ impl Verification {
         if secret.is_some() != bot_token.is_some() {
             eprintln!("Vérification Discord : il faut VERIFY_SECRET et DISCORD_TOKEN (un seul est défini)");
         }
-        let http = reqwest::Client::builder()
+        let http = crate::http()
             .user_agent("DiscordBot (https://misty-launcher.online, 1.0) misty-site")
             .timeout(Duration::from_secs(10))
             .build()
@@ -456,7 +456,7 @@ mod tests {
             secret: Some("s".into()),
             bot_token: None,
             api: String::new(),
-            http: reqwest::Client::new(),
+            http: crate::http().build().unwrap(),
             defis: Mutex::default(),
             par_lien: Mutex::default(),
             client_id: None,
@@ -487,7 +487,7 @@ mod tests {
             secret: Some("s".into()),
             bot_token: None,
             api: String::new(),
-            http: reqwest::Client::new(),
+            http: crate::http().build().unwrap(),
             defis: Mutex::default(),
             par_lien: Mutex::default(),
             client_id: None,

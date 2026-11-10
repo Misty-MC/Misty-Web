@@ -29,7 +29,7 @@ impl Discord {
         if webhook.is_none() && std::env::var_os("DISCORD_WEBHOOK").is_some() {
             eprintln!("DISCORD_WEBHOOK ignoré : ce n'est pas une adresse de webhook Discord");
         }
-        let http = reqwest::Client::builder()
+        let http = crate::http()
             .user_agent("misty-site")
             .timeout(Duration::from_secs(20))
             .build()

@@ -1,2 +1,9 @@
+# Inutile à l'image : moins de fichiers envoyés au build Docker, et le cache n'est pas invalidé
+# pour rien.
 target
 .git
+.github
+vendor
+scripts
+README.md
+LICENSE
