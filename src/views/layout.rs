@@ -140,6 +140,7 @@ fn nav(p: &Page) -> Markup {
                     a href="/#faq" { (tr.nav_faq) }
                     a href="/docs" aria-current=[p.path.starts_with("/docs").then_some("page")] { (tr.nav_docs) }
                     a href="/shop" aria-current=[p.path.starts_with("/shop").then_some("page")] { (tr.nav_shop) }
+                    a href="/tools" aria-current=[p.path.starts_with("/tools").then_some("page")] { (tr.nav_tools) }
                     a href="/patch-notes" aria-current=[on_notes.then_some("page")] {
                         (tr.nav_patch_notes)
                         @if let Some(n) = p.release_count { span.count { (n) } }
@@ -173,6 +174,7 @@ fn mobile_menu(p: &Page) -> Markup {
                 a href="/#faq" { (tr.nav_faq) }
                 a href="/docs" aria-current=[here("/docs")] { (tr.nav_docs) }
                 a href="/shop" aria-current=[here("/shop")] { (tr.nav_shop) }
+                a href="/tools" aria-current=[here("/tools")] { (tr.nav_tools) }
                 a href="/patch-notes" aria-current=[here("/patch-notes")] {
                     (tr.nav_patch_notes)
                     @if let Some(n) = p.release_count { span.count { (n) } }
@@ -221,6 +223,7 @@ fn footer(p: &Page) -> Markup {
                             li { a href="/#faq" { (tr.nav_faq) } }
                             li { a href="/docs" { (tr.docs_label) } }
                             li { a href="/shop" { (tr.nav_shop) } }
+                            li { a href="/tools" { (tr.nav_tools) } }
                             li { a href="/patch-notes" { (tr.nav_patch_notes) } }
                             li { a href="/status" { (tr.nav_status) } }
                         }

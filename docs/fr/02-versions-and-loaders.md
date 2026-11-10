@@ -23,13 +23,14 @@ Un mod loader permet à Minecraft de charger des mods. Quand tu choisis une vers
 | Forge | 1.7.10 et après | Le loader historique, une énorme bibliothèque de mods. |
 | NeoForge | 1.20.1 et après | Fork de Forge pour les versions récentes. |
 | Fabric | 1.14 et après | Léger et vite mis à jour. |
+| Quilt | 1.14 et après | Fork de Fabric, charge aussi la plupart des mods Fabric. |
 | OptiFine | 1.7.2 et après | Performances et shaders. N'installe pas d'autres mods. |
 | LiteLoader | 1.5.2 à 1.12.2 | Pour les anciennes versions. |
 
 Ces plages sont un premier filtre : un loader peut quand même manquer pour une version précise s'il n'est jamais sorti pour elle.
 
 > [!NOTE]
-> Les mods ne s'installent que sur un profil avec un mod loader (Forge, NeoForge, Fabric ou LiteLoader). Les profils Vanilla et OptiFine acceptent les packs de ressources, les datapacks et, pour OptiFine, les shaders.
+> Les mods ne s'installent que sur un profil avec un mod loader (Forge, NeoForge, Fabric, Quilt ou LiteLoader). Les profils Vanilla et OptiFine acceptent les packs de ressources, les datapacks et, pour OptiFine, les shaders.
 
 ## Shaders
 

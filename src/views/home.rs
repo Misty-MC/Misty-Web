@@ -7,8 +7,8 @@ use crate::github::{Kind, Release};
 use crate::markdown;
 use maud::{Markup, html};
 
-/// Mod loaders proposés par le launcher (Quilt y est désactivé).
-const LOADERS: [&str; 5] = ["Forge", "NeoForge", "Fabric", "OptiFine", "LiteLoader"];
+/// Mod loaders proposés par le launcher.
+const LOADERS: [&str; 6] = ["Forge", "NeoForge", "Fabric", "Quilt", "OptiFine", "LiteLoader"];
 
 pub fn render(p: &Page, latest: Option<&Release>) -> Markup {
     let tr = p.tr;

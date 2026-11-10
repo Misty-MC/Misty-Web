@@ -114,6 +114,8 @@ pub fn sitemap_xml(site: &str) -> String {
         "/patch-notes".into(),
         "/shop".into(),
         "/status".into(),
+        "/tools".into(),
+        "/tools/seed".into(),
     ];
     paths.extend(crate::legal::Kind::ALL.iter().map(|k| k.path().to_string()));
     paths.extend(
@@ -165,7 +167,7 @@ mod tests {
     #[test]
     fn sitemap_lists_every_page_in_every_language() {
         let xml = sitemap_xml("https://example.com");
-        let pages = 5 + 3 + docs::get(Lang::En).pages.len();
+        let pages = 7 + 3 + docs::get(Lang::En).pages.len();
         assert_eq!(xml.matches("<url>").count(), pages * Lang::ALL.len());
         assert!(xml.contains("<loc>https://example.com/docs/installation?lang=fr</loc>"));
         assert!(xml.contains("<loc>https://example.com/privacy?lang=fr</loc>"));
