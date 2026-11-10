@@ -35,6 +35,7 @@ src/
 ├── skins.rs           Minecraft profiles for the shop (Mojang API, mc-heads.net fallback)
 ├── seo.rs             JSON-LD, robots.txt, sitemap.xml
 ├── docs.rs            documentation pages (docs/<lang>/NN-slug.md)
+├── legal.rs           legal notice, privacy policy, terms of use (legal/<fr|en>/*.md)
 ├── github.rs          GitHub releases + cache
 ├── i18n.rs            language negotiation and translations
 ├── markdown.rs        Markdown → safe HTML (release notes and docs)
@@ -49,6 +50,7 @@ src/
     └── icons.rs       SVG icons
 locales/               one TOML file per language
 docs/                  documentation, one folder per language (en is the reference)
+legal/                 legal pages, in French and English (other languages show English)
 public/
 ├── css/               base, layout, home, patch-notes, docs
 ├── js/site.js         smooth scrolling, navigation, animations

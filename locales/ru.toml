@@ -115,6 +115,12 @@ ft_about_p = "Misty — независимый лаунчер. Он не сод�
 ft_disclaimer = "Misty не связан с Mojang Studios и Microsoft. Minecraft — товарный знак Mojang AB."
 ft_made = "Сделано на Rust — от сервера до лаунчера."
 ft_top = "Наверх"
+ft_legal_t = "Правовая информация"
+legal_notice = "Правовая информация"
+legal_privacy = "Конфиденциальность"
+legal_terms = "Условия использования"
+legal_updated = "Обновлено:"
+legal_untranslated = "Эта страница пока не переведена на русский: показана английская версия."
 
 pn_title = "Список изменений – Misty MC"
 pn_label = "Список изменений"

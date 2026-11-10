@@ -115,6 +115,12 @@ ft_about_p = "Misty è un launcher indipendente. Non contiene alcun file di Mine
 ft_disclaimer = "Misty non è affiliato a Mojang Studios né a Microsoft. Minecraft è un marchio di Mojang AB."
 ft_made = "Fatto in Rust, dal server al launcher."
 ft_top = "Torna su"
+ft_legal_t = "Note legali"
+legal_notice = "Note legali"
+legal_privacy = "Privacy"
+legal_terms = "Condizioni d'uso"
+legal_updated = "Aggiornato il"
+legal_untranslated = "Questa pagina non è ancora tradotta in italiano: viene mostrata in inglese."
 
 pn_title = "Note di rilascio – Misty MC"
 pn_label = "Note di rilascio"

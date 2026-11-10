@@ -141,6 +141,27 @@ pub async fn docs_page(
     )
 }
 
+/// Page légale (`/legal`, `/privacy`, `/terms`) : en français pour le français, sinon en anglais.
+async fn legal_page(state: &AppState, q: PageQuery, headers: &HeaderMap, kind: crate::legal::Kind) -> Response {
+    let (lang, remember) = i18n::negotiate(q.lang.as_deref(), headers);
+    let count = state.github.releases().await.map(|l| l.len());
+    let p = page(state, lang, kind.path(), count);
+    let markup = crate::views::legal::render(&p, crate::legal::get(lang, kind));
+    html_response(StatusCode::OK, markup, lang, remember)
+}
+
+pub async fn legal_notice(State(state): State<Arc<AppState>>, Query(q): Query<PageQuery>, headers: HeaderMap) -> Response {
+    legal_page(&state, q, &headers, crate::legal::Kind::Notice).await
+}
+
+pub async fn privacy(State(state): State<Arc<AppState>>, Query(q): Query<PageQuery>, headers: HeaderMap) -> Response {
+    legal_page(&state, q, &headers, crate::legal::Kind::Privacy).await
+}
+
+pub async fn terms(State(state): State<Arc<AppState>>, Query(q): Query<PageQuery>, headers: HeaderMap) -> Response {
+    legal_page(&state, q, &headers, crate::legal::Kind::Terms).await
+}
+
 const PLAYER_COOKIE: &str = "misty-player";
 
 fn read_cookie<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
