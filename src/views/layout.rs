@@ -188,11 +188,11 @@ fn mobile_menu(p: &Page) -> Markup {
 fn lang_menu(p: &Page) -> Markup {
     html! {
         details.langdd {
-            summary aria-label=(p.tr.nav_language) { (icons::globe()) span { (p.lang.code().to_uppercase()) } }
+            summary aria-label=(format!("{} : {}", p.tr.nav_language, p.tr.lang_name)) title=(p.tr.lang_name) { (icons::flag(p.lang.code())) }
             div.menu {
                 @for l in Lang::ALL {
                     a href=(format!("{}?lang={}", p.path, l.code())) hreflang=(l.code()) aria-current=[(l == p.lang).then_some("true")] {
-                        (l.tr().lang_name) span { (l.code().to_uppercase()) }
+                        (icons::flag(l.code())) span { (l.tr().lang_name) }
                     }
                 }
             }
@@ -238,7 +238,7 @@ fn footer(p: &Page) -> Markup {
                         h2 { (tr.nav_language) }
                         div.flangs {
                             @for l in Lang::ALL {
-                                a href=(format!("{}?lang={}", p.path, l.code())) hreflang=(l.code()) aria-current=[(l == p.lang).then_some("true")] { (l.code().to_uppercase()) }
+                                a href=(format!("{}?lang={}", p.path, l.code())) hreflang=(l.code()) aria-current=[(l == p.lang).then_some("true")] aria-label=(l.tr().lang_name) title=(l.tr().lang_name) { (icons::flag(l.code())) }
                             }
                         }
                     }

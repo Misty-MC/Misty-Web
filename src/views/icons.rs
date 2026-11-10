@@ -130,3 +130,18 @@ pub fn rust() -> Markup {
         r#"<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>"#,
     )
 }
+
+/// Drapeau d'une langue (SVG 3:2). Pas d'emoji : Windows n'affiche pas les drapeaux emoji.
+pub fn flag(code: &str) -> Markup {
+    let (view, shapes) = match code {
+        "fr" => ("0 0 3 2", r##"<path fill="#002654" d="M0 0h1v2H0z"/><path fill="#fff" d="M1 0h1v2H1z"/><path fill="#ce1126" d="M2 0h1v2H2z"/>"##),
+        "it" => ("0 0 3 2", r##"<path fill="#009246" d="M0 0h1v2H0z"/><path fill="#fff" d="M1 0h1v2H1z"/><path fill="#ce2b37" d="M2 0h1v2H2z"/>"##),
+        "ru" => ("0 0 3 2", r##"<path fill="#fff" d="M0 0h3v.667H0z"/><path fill="#0039a6" d="M0 .667h3v.667H0z"/><path fill="#d52b1e" d="M0 1.333h3V2H0z"/>"##),
+        "es" => ("0 0 3 2", r##"<path fill="#aa151b" d="M0 0h3v2H0z"/><path fill="#f1bf00" d="M0 .5h3v1H0z"/>"##),
+        // Royaume-Uni pour l'anglais
+        _ => ("0 0 60 30", r##"<path fill="#012169" d="M0 0h60v30H0z"/><path stroke="#fff" stroke-width="6" d="M0 0l60 30M60 0L0 30"/><path stroke="#c8102e" stroke-width="2" d="M0 0l60 30M60 0L0 30"/><path stroke="#fff" stroke-width="10" d="M30 0v30M0 15h60"/><path stroke="#c8102e" stroke-width="6" d="M30 0v30M0 15h60"/>"##),
+    };
+    PreEscaped(format!(
+        r#"<svg class="flag" viewBox="{view}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">{shapes}</svg>"#
+    ))
+}
