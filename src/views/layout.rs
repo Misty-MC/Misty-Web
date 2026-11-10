@@ -242,6 +242,14 @@ fn footer(p: &Page) -> Markup {
                             }
                         }
                     }
+                    div {
+                        h2 { (tr.ft_legal_t) }
+                        ul {
+                            @for k in crate::legal::Kind::ALL {
+                                li { a href=(k.path()) { (k.label(tr)) } }
+                            }
+                        }
+                    }
                     div.about {
                         h2 { (tr.ft_about_t) }
                         p { (tr.ft_about_p) }

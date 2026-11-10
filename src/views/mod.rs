@@ -4,6 +4,7 @@ pub mod docs;
 pub mod home;
 pub mod icons;
 pub mod layout;
+pub mod legal;
 pub mod not_found;
 pub mod patch_notes;
 pub mod shop;

@@ -73,7 +73,7 @@
 .ftop{display:flex;justify-content:space-between;align-items:flex-start;gap:24px 48px;flex-wrap:wrap;padding:clamp(48px,6vw,72px) 0 40px}
 .ftop .tag{color:var(--muted);font-size:14.5px;margin-top:10px;max-width:300px}
 .disclaimer{max-width:360px;text-align:right;font-size:13.5px;color:var(--muted)}
-.fcols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.6fr);gap:32px;padding-bottom:44px}
+.fcols{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.6fr);gap:32px;padding-bottom:44px}
 .fcols h2{font-size:13px;font-weight:650;margin-bottom:14px}
 .fcols ul{display:flex;flex-direction:column;gap:9px}
 .fcols ul a{display:inline-flex;align-items:center;gap:5px;font-size:14px;color:var(--muted);transition:color .15s}

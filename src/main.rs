@@ -28,6 +28,7 @@ mod github;
 mod miroir;
 mod presence;
 mod i18n;
+mod legal;
 mod markdown;
 mod routes;
 mod scene;
@@ -82,6 +83,7 @@ fn env_or(key: &str, default: &str) -> String {
 async fn main() {
     i18n::init();
     docs::init();
+    legal::init();
 
     let state = Arc::new(AppState {
         github: Arc::new(github::GitHub::new(
@@ -136,6 +138,9 @@ async fn main() {
         .route("/docs/search.json", get(routes::docs_search_index))
         .route("/docs/{slug}", get(routes::docs_page))
         .route("/status", get(routes::status_page))
+        .route("/legal", get(routes::legal_notice))
+        .route("/privacy", get(routes::privacy))
+        .route("/terms", get(routes::terms))
         .route("/status.json", get(routes::status_json))
         .route("/api/latest", get(routes::api_latest))
         .route("/download/{kind}", get(routes::download))
