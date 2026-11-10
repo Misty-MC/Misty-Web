@@ -1,9 +1,7 @@
 # Image de production (Coolify, ou tout hébergeur Docker).
 FROM rust:1-slim-bookworm AS build
 WORKDIR /app
-COPY Cargo.toml Cargo.lock build.rs ./
-# cubiomes (C, MIT) : seed viewer
-COPY vendor vendor
+COPY Cargo.toml Cargo.lock ./
 COPY src src
 COPY locales locales
 COPY docs docs

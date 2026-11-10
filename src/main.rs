@@ -67,8 +67,6 @@ pub struct AppState {
     pub presence: presence::Presence,
     /// Joueurs en jeu avec Misty Client, et leurs cosmétiques Misty (/api/client/…).
     pub client: client::Client,
-    /// Seed viewer : cache et file d'attente des calculs cubiomes (/api/seed/…).
-    pub seedmap: seedmap::SeedMap,
     /// Salon Discord de l'équipe (rapports, résumé du jour).
     pub discord: Arc<discord::Discord>,
     /// Captcha de vérification des serveurs Discord qui utilisent Misty Bot.
@@ -99,7 +97,6 @@ async fn main() {
         telemetrie: Arc::new(telemetrie::Telemetrie::new()),
         presence: presence::Presence::new(),
         client: client::Client::new(),
-        seedmap: seedmap::SeedMap::new(),
         discord: Arc::new(discord::Discord::new()),
         verification: Arc::new(verify::Verification::new()),
         scene: scene::render(&scene::SceneOptions {
@@ -163,10 +160,6 @@ async fn main() {
             post(presence::signe).layer(DefaultBodyLimit::max(2 * 1024)),
         )
         .route("/api/online", get(presence::en_ligne))
-        .route("/api/seed/info", get(seedmap::info))
-        .route("/api/seed/biomes", get(seedmap::liste_biomes))
-        .route("/api/seed/tile", get(seedmap::tile))
-        .route("/api/seed/structures", get(seedmap::structures_region))
         .route("/api/client/login", post(client::login).layer(DefaultBodyLimit::max(1024)))
         .route("/api/client/presence", post(client::presence).layer(DefaultBodyLimit::max(1024)))
         .route("/api/client/players", post(client::joueurs).layer(DefaultBodyLimit::max(8 * 1024)))

@@ -1,6 +1,7 @@
-// Seed viewer (/tools/seed) : carte des biomes et structures, en tuiles calculées par le serveur
-// (/api/seed/…). Chaque tuile est un tableau d'identifiants de biomes que l'on colore ici,
-// ce qui permet aussi d'afficher le biome sous la souris.
+// Seed viewer (/tools/seed) : carte des biomes et structures, en tuiles calculées dans le
+// navigateur du visiteur (cubiomes en WebAssembly, dans des Web Workers : seed-worker.js), sur
+// tous les cœurs disponibles. Le serveur ne calcule rien. Chaque tuile est un tableau
+// d'identifiants de biomes que l'on colore ici, ce qui permet aussi d'afficher le biome sous la souris.
 (function () {
   "use strict";
   var app = document.getElementById("seed-app");
@@ -18,7 +19,9 @@
   var MIN_BPP = 0.25, MAX_BPP = 256;
   // Structures affichées seulement assez près (sinon trop de régions à demander)
   var STRUCT_MAX_BPP = 4;
-  var MAX_REQ = 6;
+  // Workers de calcul : un par cœur, en laissant un cœur à la page (8 au plus)
+  var WORKERS = Math.max(1, Math.min(8, (navigator.hardwareConcurrency || 4) - 1));
+  var MAX_REQ = WORKERS * 2;
 
   var $ = function (id) { return document.getElementById(id); };
   var canvas = $("seed-canvas"), ctx = canvas.getContext("2d"), box = $("seed-map");
@@ -41,14 +44,59 @@
     });
   });
 
-  // ---------- Données ----------
-  function api(path, params) {
-    var q = Object.keys(params).map(function (k) { return k + "=" + encodeURIComponent(params[k]); }).join("&");
-    return "/api/seed/" + path + "?" + q;
+  // ---------- Calcul (Web Workers) ----------
+  var pool = [], nextId = 1, pending = {};
+  for (var w = 0; w < WORKERS; w++) {
+    var worker = new Worker(cfg.worker);
+    worker.busy = 0;
+    worker.onmessage = function (ev) {
+      var m = ev.data, p = pending[m.id];
+      if (!p) return;
+      delete pending[m.id];
+      p.worker.busy--;
+      if (m.ok) p.resolve(m.result); else p.reject(m.error);
+    };
+    pool.push(worker);
+  }
+  // Envoie au Worker le moins occupé (ou à tous avec `all`)
+  function run(msg, all) {
+    var targets = all ? pool : [pool.reduce(function (a, b) { return b.busy < a.busy ? b : a; })];
+    return Promise.all(targets.map(function (wk) {
+      return new Promise(function (resolve, reject) {
+        var id = nextId++;
+        pending[id] = { resolve: resolve, reject: reject, worker: wk };
+        wk.busy++;
+        msg.id = id;
+        wk.postMessage(msg);
+      });
+    })).then(function (r) { return r[0]; });
+  }
+  var ready = run({ op: "init", wasm: new URL(cfg.wasm, location.href).href }, true);
+
+  // Seed saisie → nombre (64 bits), comme le jeu : un nombre tel quel, sinon le hashCode Java du
+  // texte, et vide : au hasard.
+  function readSeed(text) {
+    var t = String(text).trim();
+    if (!t) {
+      var r = new BigInt64Array(1);
+      crypto.getRandomValues(r);
+      return r[0];
+    }
+    if (/^-?\d+$/.test(t)) {
+      var n = BigInt(t);
+      if (n >= -(1n << 63n) && n < (1n << 63n)) return n;
+    }
+    var h = 0;
+    for (var i = 0; i < t.length; i++) h = (Math.imul(h, 31) + t.charCodeAt(i)) | 0;
+    return BigInt(h);
+  }
+
+  function structureTypes() {
+    return cfg.structures.filter(function (s) { return s[1] === state.dim; }).map(function (s) { return [s[0], s[2]]; });
   }
 
   function loadBiomes() {
-    return fetch(api("biomes", { v: state.v })).then(function (r) { return r.json(); }).then(function (b) {
+    return ready.then(function () { return run({ op: "biomes", v: state.v }); }).then(function (b) {
       biomes = b; palette = new Uint8Array(256 * 3); names = [];
       Object.keys(b).forEach(function (id) {
         var hex = b[id][1], i = +id;
@@ -92,8 +140,7 @@
   function fetchTile(k) {
     var t = tiles.get(k), myGen = gen;
     t.state = "loading"; inflight++;
-    fetch(api("tile", { seed: state.seed, v: state.v, dim: state.dim, scale: t.scale, x: t.tx, z: t.tz }))
-      .then(function (r) { if (!r.ok) throw r.status; return r.arrayBuffer(); })
+    run({ op: "tile", seed: state.seed, v: state.v, dim: state.dim, scale: t.scale, x: t.tx, z: t.tz, size: T })
       .then(function (buf) {
         if (myGen !== gen) return;
         var ids = new Uint8Array(buf), img = new ImageData(T, T), d = img.data;
@@ -107,10 +154,10 @@
         t.ids = ids; t.canvas = c; t.state = "ready";
         note(null);
       })
-      .catch(function (status) {
+      .catch(function () {
         if (myGen !== gen) return;
         tiles.delete(k);
-        if (status === 429) setTimeout(draw, 3000); else note(cfg.text.error);
+        note(cfg.text.error);
       })
       .finally(function () { inflight--; if (myGen === gen) { draw(); } });
   }
@@ -120,8 +167,8 @@
     if (regions.has(k)) return;
     var myGen = gen;
     regions.set(k, null);
-    fetch(api("structures", { seed: state.seed, v: state.v, dim: state.dim, x: rx, z: rz }))
-      .then(function (r) { if (!r.ok) throw r.status; return r.json(); })
+    run({ op: "structures", seed: state.seed, v: state.v, dim: state.dim, types: structureTypes(),
+      x0: rx * REGION, z0: rz * REGION, x1: rx * REGION + REGION - 1, z1: rz * REGION + REGION - 1 })
       .then(function (list) { if (myGen === gen) { regions.set(k, list); draw(); } })
       .catch(function () { if (myGen === gen) regions.delete(k); });
   }
@@ -357,7 +404,7 @@
   });
 
   function updateDims() {
-    // Nether depuis la 1.16 (19), End depuis la 1.9 (12), comme côté serveur
+    // Nether depuis la 1.16 (19), End depuis la 1.9 (12) : cubiomes ne les génère pas avant
     dimButtons.forEach(function (b) {
       var d = +b.dataset.dim;
       b.disabled = (d === -1 && state.v < 19) || (d === 1 && state.v < 12);
@@ -392,13 +439,13 @@
 
   // Ouvre une seed (texte ou nombre). `recentrer` : se placer sur le point d'apparition.
   function open(text, recentrer) {
-    return fetch(api("info", { seed: text, v: state.v }))
-      .then(function (r) { if (!r.ok) throw r.status; return r.json(); })
-      .then(function (info) {
-        state.seed = info.seed;
-        state.spawn = info.spawn;
-        if (!input.value.trim() || recentrer) input.value = text.trim() ? text.trim() : info.seed;
-        if (recentrer) { state.x = info.spawn.x; state.z = info.spawn.z; }
+    var seed = readSeed(text).toString();
+    return ready.then(function () { return run({ op: "spawn", seed: seed, v: state.v }); })
+      .then(function (spawn) {
+        state.seed = seed;
+        state.spawn = spawn;
+        if (!input.value.trim() || recentrer) input.value = String(text).trim() ? String(text).trim() : seed;
+        if (recentrer) { state.x = spawn.x; state.z = spawn.z; }
         reset();
       })
       .catch(function () { note(cfg.text.error); });
