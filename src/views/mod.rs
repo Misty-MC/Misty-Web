@@ -9,4 +9,5 @@ pub mod not_found;
 pub mod patch_notes;
 pub mod shop;
 pub mod status;
+pub mod tools;
 pub mod verify;
