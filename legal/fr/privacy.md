@@ -1,7 +1,7 @@
 +++
 title = "Politique de confidentialité"
 description = "Ce que le site et le launcher Misty envoient, ce que nous gardons, combien de temps, et vos droits."
-updated = "2026-11-10"
+updated = "2026-11-11"
 +++
 
 Misty n'a ni compte utilisateur, ni publicité, ni outil de mesure d'audience. Nous collectons le moins possible, et presque tout reste en mémoire quelques minutes. Cette page détaille chaque cas.
@@ -55,13 +55,14 @@ Le bouton « Envoyer les logs » de la console envoie, à votre demande, les der
 
 ### Misty Client (en jeu)
 
-Misty Client, le mod en jeu du launcher, permet aux joueurs Misty de se reconnaître (badge, cape et élytres Misty). Il est activé par défaut et se désactive dans les options du launcher. Quand il est actif :
+Misty Client, le mod en jeu du launcher, permet aux joueurs Misty de se reconnaître (badge, capes, élytres et chapeaux Misty). Il est activé par défaut et se désactive dans les options du launcher. Quand il est actif :
 
 - votre compte est vérifié comme le ferait un serveur Minecraft : votre **pseudo** est vérifié auprès de **Mojang**, qui nous renvoie votre **UUID** Minecraft. Votre jeton Minecraft ne quitte jamais votre jeu ;
-- le jeu envoie toutes les minutes un signe de vie avec le **cosmétique Misty porté** ;
+- le jeu envoie toutes les minutes un signe de vie avec les **cosmétiques Misty portés** ;
+- pour la cape « early player », réservée aux premiers joueurs, nous gardons votre **UUID** et la **date de votre première connexion** à Misty Client. Rien d'autre (ni pseudo, ni adresse IP) ;
 - il demande quels joueurs autour de vous utilisent Misty (leurs UUID, 100 au plus). Ces listes ne sont pas gardées.
 
-Tout reste en mémoire : un joueur est oublié 3 minutes après son dernier signe de vie, une connexion après une heure d'inactivité. Les comptes hors ligne ne peuvent pas être vérifiés et ne sont pas visibles des autres.
+Le reste est en mémoire : un joueur est oublié 3 minutes après son dernier signe de vie, une connexion après une heure d'inactivité. Les comptes hors ligne ne peuvent pas être vérifiés et ne sont pas visibles des autres.
 
 ### Compte Microsoft
 
@@ -90,6 +91,7 @@ Le captcha et son état restent en mémoire 10 minutes au plus. Le site garde se
 | Adresse IP (limitation des requêtes) | 1 minute à 1 heure, en mémoire |
 | Signe de vie du launcher | 3 minutes, en mémoire |
 | Misty Client | 3 minutes à 1 heure, en mémoire |
+| Misty Client : UUID et date de première connexion (cape early player) | tant que la cape early player existe |
 | Profils de la boutique | 10 minutes environ, en mémoire |
 | Captcha de vérification | 10 minutes, en mémoire |
 | Télémétrie et rapports de logs | 90 jours |

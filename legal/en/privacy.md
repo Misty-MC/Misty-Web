@@ -1,7 +1,7 @@
 +++
 title = "Privacy policy"
 description = "What the Misty website and launcher send, what we keep, for how long, and your rights."
-updated = "2026-11-10"
+updated = "2026-11-11"
 +++
 
 Misty has no user accounts, no ads and no analytics tools. We collect as little as possible, and almost everything stays in memory for a few minutes. This page details each case.
@@ -55,13 +55,14 @@ The console's "Send logs" button sends, at your request, the last lines of the c
 
 ### Misty Client (in game)
 
-Misty Client, the launcher's in-game mod, lets Misty players recognize each other (Misty badge, cape and elytra). It is on by default and can be turned off in the launcher settings. When it is on:
+Misty Client, the launcher's in-game mod, lets Misty players recognize each other (Misty badge, capes, elytra and hats). It is on by default and can be turned off in the launcher settings. When it is on:
 
 - your account is verified the way a Minecraft server does it: your **username** is checked with **Mojang**, which returns your Minecraft **UUID** to us. Your Minecraft token never leaves your game;
-- the game sends a sign of life every minute with the **Misty cosmetic you wear**;
+- the game sends a sign of life every minute with the **Misty cosmetics you wear**;
+- for the "early player" cape, kept for the first players, we keep your **UUID** and the **date you first signed in** to Misty Client. Nothing else (no username, no IP address);
 - it asks which players around you use Misty (their UUIDs, 100 at most). These lists are not kept.
 
-Everything stays in memory: a player is forgotten 3 minutes after their last sign of life, a login after one hour of inactivity. Offline accounts cannot be verified and are not shown to others.
+The rest stays in memory: a player is forgotten 3 minutes after their last sign of life, a login after one hour of inactivity. Offline accounts cannot be verified and are not shown to others.
 
 ### Microsoft account
 
@@ -90,6 +91,7 @@ The captcha and its state stay in memory for 10 minutes at most. For each server
 | IP address (rate limiting) | 1 minute to 1 hour, in memory |
 | Launcher sign of life | 3 minutes, in memory |
 | Misty Client | 3 minutes to 1 hour, in memory |
+| Misty Client: UUID and first sign-in date (early player cape) | as long as the early player cape exists |
 | Shop profiles | about 10 minutes, in memory |
 | Verification captcha | 10 minutes, in memory |
 | Telemetry and log reports | 90 days |

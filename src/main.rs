@@ -10,6 +10,8 @@
 //! - `GITHUB_API` (`https://api.github.com` par défaut) : utile pour tester avec une fausse API
 //! - `GITHUB_WEB` (`https://github.com` par défaut) : flux Atom et fichiers des releases
 //! - `MISTY_CACHE_DIR` (dossier temporaire par défaut) : caches, statut, copie des versions, télémétrie
+//! - `EARLY_BEFORE` (AAAA-MM-JJ, facultatif) : la cape early player de Misty Client est réservée aux
+//!   comptes connectés avant cette date ; sans elle, tous les comptes y ont droit
 //! - `VERIFY_SECRET` et `DISCORD_TOKEN` (facultatifs) : captcha `/verify` de Misty Bot (même secret
 //!   que le bot, et le token du bot pour donner le rôle) ; `DISCORD_CLIENT_SECRET` en plus pour le
 //!   captcha dans Discord (Activité, page `/activity`)
@@ -190,6 +192,7 @@ async fn main() {
         .route("/api/client/login", post(client::login).layer(DefaultBodyLimit::max(1024)))
         .route("/api/client/presence", post(client::presence).layer(DefaultBodyLimit::max(1024)))
         .route("/api/client/players", post(client::joueurs).layer(DefaultBodyLimit::max(8 * 1024)))
+        .route("/api/client/early/{uuid}", get(client::early))
         .route(
             "/api/telemetry",
             post(telemetrie::evenement).layer(DefaultBodyLimit::max(32 * 1024)),

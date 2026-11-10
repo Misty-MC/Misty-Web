@@ -6,12 +6,17 @@
 //!   « rejoint » un identifiant de serveur tiré au hasard auprès de Mojang (`joinServer`), le site
 //!   le vérifie chez Mojang (`hasJoined`) et rend un jeton. Personne ne peut donc se faire passer
 //!   pour un autre, et le jeton Minecraft du joueur ne quitte jamais son jeu.
-//! - `POST /api/client/presence` (jeton) : signe de vie toutes les minutes, avec le cosmétique porté.
+//! - `POST /api/client/presence` (jeton) : signe de vie toutes les minutes, avec ce qui est porté
+//!   (dans le dos : cape ou élytres ; sur la tête : chapeau).
 //! - `POST /api/client/players` (jeton) : parmi ces joueurs (ceux du serveur où l'on joue),
 //!   lesquels sont en ligne avec Misty, et que portent-ils.
+//! - `GET /api/client/early/{uuid}` : ce compte a-t-il droit à la cape early player ?
 //!
-//! Tout reste en mémoire : rien n'est écrit, les listes de joueurs demandées ne sont pas gardées,
-//! aucune adresse IP n'est conservée (elle ne sert qu'à limiter le débit, une minute).
+//! Cape early player : réservée aux comptes connectés à Misty Client avant la date `EARLY_BEFORE`
+//! (AAAA-MM-JJ ; sans elle, tous les comptes y ont droit). Pour le savoir, le site garde l'UUID et
+//! la date de première connexion de chaque compte (`premiers-joueurs.json` dans `MISTY_CACHE_DIR`).
+//! Le reste est en mémoire : les listes de joueurs demandées ne sont pas gardées, aucune adresse
+//! IP n'est conservée (elle ne sert qu'à limiter le débit, une minute).
 
 use axum::Json;
 use axum::extract::State;
@@ -20,8 +25,9 @@ use axum::response::{IntoResponse, Response};
 use rand::Rng;
 use serde_json::{Map, Value, json};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use crate::AppState;
 
@@ -38,8 +44,12 @@ const MAX_LOGIN_PAR_MINUTE: u32 = 12;
 const MAX_UUIDS: usize = 100;
 /// Au-delà, les jetons inactifs sont oubliés, puis les nouvelles connexions refusées (protection mémoire).
 const MAX_JETONS: usize = 200_000;
-/// Cosmétiques Misty connus (les mêmes identifiants que le launcher et le mod).
-const COSMETIQUES: &[&str] = &["misty_cape", "misty_elytra"];
+/// Cosmétiques Misty portés dans le dos (les mêmes identifiants que le launcher et le mod).
+const COSMETIQUES: &[&str] = &["misty_cape", "misty_elytra", EARLY_CAPE];
+/// Chapeaux Misty.
+const CHAPEAUX: &[&str] = &["cloudly"];
+/// La cape des premiers joueurs : seulement pour les comptes vus avant `EARLY_BEFORE`.
+const EARLY_CAPE: &str = "early_cape";
 
 struct Jeton {
     /// UUID du compte, 32 chiffres hexadécimaux en minuscules
@@ -50,6 +60,7 @@ struct Jeton {
 struct Joueur {
     vu: Instant,
     cosmetique: &'static str,
+    chapeau: &'static str,
 }
 
 pub struct Client {
@@ -61,6 +72,12 @@ pub struct Client {
     joueurs: Mutex<HashMap<String, Joueur>>,
     /// (adresse, sorte de requête) → (début de la minute, compte), seulement pour limiter le débit
     debits: Mutex<HashMap<(String, bool), (Instant, u32)>>,
+    /// UUID → première connexion (secondes Unix), gardé sur disque (cape early player)
+    premiers: Mutex<HashMap<String, u64>>,
+    /// Fichier des premières connexions (None : rien n'est gardé, pour les tests)
+    fichier_premiers: Option<PathBuf>,
+    /// Les comptes vus avant cette date ont la cape early player (None : tous)
+    early_avant: Option<u64>,
 }
 
 impl Client {
@@ -70,6 +87,34 @@ impl Client {
             jetons: Mutex::default(),
             joueurs: Mutex::default(),
             debits: Mutex::default(),
+            premiers: Mutex::new(fichier_premiers().and_then(|f| std::fs::read(f).ok()).and_then(|o| serde_json::from_slice(&o).ok()).unwrap_or_default()),
+            fichier_premiers: fichier_premiers(),
+            early_avant: std::env::var("EARLY_BEFORE").ok().and_then(|d| date_unix(&d)),
+        }
+    }
+
+    /// Note la première connexion de ce compte (une seule fois) et l'écrit sur disque.
+    fn vu_la_premiere_fois(&self, uuid: &str) {
+        let mut premiers = self.premiers.lock().unwrap();
+        if premiers.contains_key(uuid) || premiers.len() >= MAX_JETONS * 10 {
+            return;
+        }
+        premiers.insert(uuid.to_string(), maintenant());
+        if let Some(f) = &self.fichier_premiers {
+            let temporaire = f.with_extension("tmp");
+            if let Ok(texte) = serde_json::to_vec(&*premiers) {
+                if std::fs::write(&temporaire, texte).is_ok() {
+                    let _ = std::fs::rename(&temporaire, f);
+                }
+            }
+        }
+    }
+
+    /// Ce compte a-t-il droit à la cape early player ? (vu avant `EARLY_BEFORE`, ou pas de date)
+    fn early(&self, uuid: &str) -> bool {
+        match self.early_avant {
+            None => true,
+            Some(limite) => self.premiers.lock().unwrap().get(uuid).is_some_and(|&vu| vu < limite),
         }
     }
 
@@ -112,26 +157,28 @@ impl Client {
         Some(j.uuid.clone())
     }
 
-    fn signe(&self, uuid: String, cosmetique: &'static str) {
+    fn signe(&self, uuid: String, cosmetique: &'static str, chapeau: &'static str) {
+        // la cape early player seulement pour ceux qui y ont droit
+        let cosmetique = if cosmetique == EARLY_CAPE && !self.early(&uuid) { "" } else { cosmetique };
         let mut joueurs = self.joueurs.lock().unwrap();
         if joueurs.len() > MAX_JETONS {
             joueurs.retain(|_, j| j.vu.elapsed() < EN_LIGNE);
         }
-        joueurs.insert(uuid, Joueur { vu: Instant::now(), cosmetique });
+        joueurs.insert(uuid, Joueur { vu: Instant::now(), cosmetique, chapeau });
     }
 
     fn quitte(&self, uuid: &str) {
         self.joueurs.lock().unwrap().remove(uuid);
     }
 
-    /// Parmi ces UUID, ceux qui sont en ligne avec Misty : `{ "<uuid avec tirets>": { "cosmetic": "…" } }`.
+    /// Parmi ces UUID, ceux qui sont en ligne avec Misty : `{ "<uuid avec tirets>": { "cosmetic": "…", "hat": "…" } }`.
     fn en_ligne(&self, uuids: &[String]) -> Map<String, Value> {
         let joueurs = self.joueurs.lock().unwrap();
         uuids
             .iter()
             .filter_map(|u| {
                 let j = joueurs.get(u).filter(|j| j.vu.elapsed() < EN_LIGNE)?;
-                Some((avec_tirets(u), json!({ "cosmetic": j.cosmetique })))
+                Some((avec_tirets(u), json!({ "cosmetic": j.cosmetique, "hat": j.chapeau })))
             })
             .collect()
     }
@@ -151,12 +198,35 @@ fn cosmetique_connu(texte: Option<&str>) -> &'static str {
     COSMETIQUES.iter().copied().find(|c| Some(*c) == texte).unwrap_or("")
 }
 
+fn chapeau_connu(texte: Option<&str>) -> &'static str {
+    CHAPEAUX.iter().copied().find(|c| Some(*c) == texte).unwrap_or("")
+}
+
+fn maintenant() -> u64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+}
+
+/// `premiers-joueurs.json` dans `MISTY_CACHE_DIR` (sans ce dossier : rien n'est gardé).
+fn fichier_premiers() -> Option<PathBuf> {
+    if cfg!(test) {
+        return None;
+    }
+    std::env::var_os("MISTY_CACHE_DIR").map(|d| PathBuf::from(d).join("premiers-joueurs.json"))
+}
+
+/// "2027-01-01" → secondes Unix à minuit UTC.
+fn date_unix(texte: &str) -> Option<u64> {
+    let format = time::macros::format_description!("[year]-[month]-[day]");
+    let date = time::Date::parse(texte.trim(), &format).ok()?;
+    u64::try_from(date.midnight().assume_utc().unix_timestamp()).ok()
+}
+
 fn erreur(code: StatusCode, message: &str) -> Response {
     (code, Json(json!({ "error": message }))).into_response()
 }
 
 /// `POST /api/client/login` : `{ "name": "<pseudo>", "serverId": "<40 chiffres hexadécimaux>" }`
-/// → `{ "token": "…", "uuid": "…" }`. 403 si Mojang ne confirme pas ce compte.
+/// → `{ "token": "…", "uuid": "…", "early": true }`. 403 si Mojang ne confirme pas ce compte.
 pub async fn login(State(state): State<Arc<AppState>>, entetes: HeaderMap, Json(corps): Json<Value>) -> Response {
     let c = &state.client;
     if !c.autorise(&crate::presence::adresse(&entetes), true) {
@@ -181,13 +251,14 @@ pub async fn login(State(state): State<Arc<AppState>>, entetes: HeaderMap, Json(
     let Some(uuid) = profil["id"].as_str().and_then(uuid_normalise) else {
         return erreur(StatusCode::BAD_GATEWAY, "bad mojang answer");
     };
+    c.vu_la_premiere_fois(&uuid);
     match c.ouvrir(&uuid) {
-        Some(jeton) => Json(json!({ "token": jeton, "uuid": avec_tirets(&uuid) })).into_response(),
+        Some(jeton) => Json(json!({ "token": jeton, "uuid": avec_tirets(&uuid), "early": c.early(&uuid) })).into_response(),
         None => StatusCode::SERVICE_UNAVAILABLE.into_response(),
     }
 }
 
-/// `POST /api/client/presence` (jeton) : `{ "cosmetic": "misty_cape" }`, ou `{ "bye": true }`
+/// `POST /api/client/presence` (jeton) : `{ "cosmetic": "misty_cape", "hat": "cloudly" }`, ou `{ "bye": true }`
 /// quand le jeu se ferme. 401 si le jeton n'est plus connu : le jeu se reconnecte.
 pub async fn presence(State(state): State<Arc<AppState>>, entetes: HeaderMap, Json(corps): Json<Value>) -> Response {
     let c = &state.client;
@@ -200,7 +271,7 @@ pub async fn presence(State(state): State<Arc<AppState>>, entetes: HeaderMap, Js
     if corps["bye"].as_bool() == Some(true) {
         c.quitte(&uuid);
     } else {
-        c.signe(uuid, cosmetique_connu(corps["cosmetic"].as_str()));
+        c.signe(uuid, cosmetique_connu(corps["cosmetic"].as_str()), chapeau_connu(corps["hat"].as_str()));
     }
     StatusCode::NO_CONTENT.into_response()
 }
@@ -220,6 +291,19 @@ pub async fn joueurs(State(state): State<Arc<AppState>>, entetes: HeaderMap, Jso
     };
     let uuids: Vec<String> = liste.iter().filter_map(|u| u.as_str().and_then(uuid_normalise)).collect();
     Json(json!({ "players": c.en_ligne(&uuids) })).into_response()
+}
+
+/// `GET /api/client/early/{uuid}` → `{ "early": true }` : ce compte a-t-il droit à la cape early
+/// player ? (le launcher grise la cape sinon)
+pub async fn early(State(state): State<Arc<AppState>>, entetes: HeaderMap, axum::extract::Path(uuid): axum::extract::Path<String>) -> Response {
+    let c = &state.client;
+    if !c.autorise(&crate::presence::adresse(&entetes), false) {
+        return StatusCode::TOO_MANY_REQUESTS.into_response();
+    }
+    let Some(uuid) = uuid_normalise(&uuid) else {
+        return erreur(StatusCode::BAD_REQUEST, "bad request");
+    };
+    Json(json!({ "early": c.early(&uuid) })).into_response()
 }
 
 #[cfg(test)]
@@ -261,13 +345,41 @@ mod tests {
 
         // pas encore de signe de vie : pas en ligne
         assert!(c.en_ligne(&[ALEX.to_string()]).is_empty());
-        c.signe(ALEX.to_string(), "misty_cape");
+        c.signe(ALEX.to_string(), "misty_cape", "cloudly");
         let en_ligne = c.en_ligne(&[ALEX.to_string(), "0".repeat(32)]);
         assert_eq!(en_ligne.len(), 1);
         assert_eq!(en_ligne["ec561538-f3fd-461d-aff5-086b22154bce"]["cosmetic"], "misty_cape");
+        assert_eq!(en_ligne["ec561538-f3fd-461d-aff5-086b22154bce"]["hat"], "cloudly");
 
         c.quitte(ALEX);
         assert!(c.en_ligne(&[ALEX.to_string()]).is_empty());
+    }
+
+    #[test]
+    fn chapeaux_inconnus_ignores() {
+        assert_eq!(chapeau_connu(Some("cloudly")), "cloudly");
+        assert_eq!(chapeau_connu(Some("misty_cape")), "");
+        assert_eq!(cosmetique_connu(Some("cloudly")), "");
+    }
+
+    #[test]
+    fn cape_early_seulement_avant_la_date() {
+        let mut c = Client::new();
+        // sans date : tout le monde
+        assert!(c.early(ALEX));
+        c.early_avant = date_unix("2026-01-01");
+        assert_eq!(date_unix("1970-01-02"), Some(86_400));
+        // pas encore vu : non ; vu maintenant (après la date) : non plus
+        assert!(!c.early(ALEX));
+        c.vu_la_premiere_fois(ALEX);
+        assert!(!c.early(ALEX));
+        c.signe(ALEX.to_string(), EARLY_CAPE, "");
+        assert_eq!(c.en_ligne(&[ALEX.to_string()])["ec561538-f3fd-461d-aff5-086b22154bce"]["cosmetic"], "");
+        // vu avant la date : oui, et la cape passe
+        c.premiers.lock().unwrap().insert(ALEX.to_string(), 1_000);
+        assert!(c.early(ALEX));
+        c.signe(ALEX.to_string(), EARLY_CAPE, "");
+        assert_eq!(c.en_ligne(&[ALEX.to_string()])["ec561538-f3fd-461d-aff5-086b22154bce"]["cosmetic"], EARLY_CAPE);
     }
 
     #[test]
